@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getSesionActual } from "@/lib/session";
 import { verificarPermiso } from "@/lib/rbac";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 export async function GET(
   _request: Request,
@@ -82,6 +83,8 @@ export async function PUT(
       sexo, direccion, telefono, email, seguro_medico, activo,
     } = body;
 
+    const cambioActivo = activo !== undefined && activo !== actuales[0].activo;
+
     await pool.query(
       `UPDATE paciente
        SET nombre = COALESCE($1, nombre),
@@ -106,6 +109,16 @@ export async function PUT(
       "SELECT * FROM paciente WHERE id = $1",
       [id]
     );
+
+    if (cambioActivo) {
+      await registrarAuditoria({
+        usuario_id: sesion.usuario_id,
+        tabla_afectada: "paciente",
+        accion: "UPDATE",
+        registro_id: parseInt(id),
+        detalle: `Paciente ${actuales[0].nombre} ${actuales[0].apellido} ${activo ? "activado" : "desactivado"}`,
+      });
+    }
 
     return NextResponse.json({
       mensaje: "Paciente actualizado",

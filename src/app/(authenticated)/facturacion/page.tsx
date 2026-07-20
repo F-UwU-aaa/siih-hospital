@@ -41,11 +41,11 @@ export default function FacturacionPage() {
 
   useEffect(() => {
     fetch("/api/seguridad/sesion")
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (data.usuario_id) {
-          setSesion(data);
-          fetchFacturas(data.rol_nombre, data.usuario_id);
+        if (data?.usuario?.id) {
+          setSesion({ usuario_id: data.usuario.id, rol_id: 0, username: data.usuario.username, rol_nombre: data.usuario.rol_nombre });
+          fetchFacturas(data.usuario.rol_nombre, data.usuario.id);
         } else {
           router.push("/login");
         }

@@ -51,11 +51,11 @@ export default function FacturaDetailPage() {
 
   useEffect(() => {
     fetch("/api/seguridad/sesion")
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (data.usuario_id) {
-          setSesion(data);
-          fetchFactura(data.usuario_id);
+        if (data?.usuario?.id) {
+          setSesion({ usuario_id: data.usuario.id, rol_nombre: data.usuario.rol_nombre });
+          fetchFactura(data.usuario.id);
         } else {
           router.push("/login");
         }

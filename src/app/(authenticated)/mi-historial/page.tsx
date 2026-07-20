@@ -72,7 +72,7 @@ export default function MiHistorialPage() {
     fetch("/api/seguridad/sesion")
       .then((r) => (r.ok ? r.json() : null))
       .then((sesion) => {
-        if (!sesion?.usuario_id) { router.push("/login"); return; }
+        if (!sesion?.usuario?.id) { router.push("/login"); return; }
         cargarHistorial();
       })
       .catch(() => router.push("/login"));

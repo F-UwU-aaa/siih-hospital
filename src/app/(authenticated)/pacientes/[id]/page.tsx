@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageHeader, Button } from "@/components/ui";
 
@@ -39,6 +39,7 @@ interface Antecedente {
 export default function FichaPacientePage() {
   const params = useParams();
   const id = params.id;
+  const router = useRouter();
 
   const [paciente, setPaciente] = useState<Paciente | null>(null);
   const [historial, setHistorial] = useState<{
@@ -48,18 +49,23 @@ export default function FichaPacientePage() {
   const [tab, setTab] = useState<"alergias" | "antecedentes">("alergias");
   const [cargando, setCargando] = useState(true);
 
-  // Formulario nueva alergia
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editForm, setEditForm] = useState({
+    nombre: "", apellido: "", fecha_nacimiento: "", sexo: "",
+    telefono: "", email: "", direccion: "", seguro_medico: "",
+  });
+  const [editMsg, setEditMsg] = useState("");
+  const [editando, setEditando] = useState(false);
+
+  const [toggleMsg, setToggleMsg] = useState("");
+
   const [nuevaAlergia, setNuevaAlergia] = useState({
-    sustancia: "",
-    reaccion: "",
-    severidad: "",
+    sustancia: "", reaccion: "", severidad: "",
   });
   const [msgAlergia, setMsgAlergia] = useState("");
 
-  // Formulario nuevo antecedente
   const [nuevoAntecedente, setNuevoAntecedente] = useState({
-    tipo: "",
-    descripcion: "",
+    tipo: "", descripcion: "",
   });
   const [msgAntecedente, setMsgAntecedente] = useState("");
 
@@ -74,7 +80,20 @@ export default function FichaPacientePage() {
         fetch(`/api/pacientes/${id}`),
         fetch(`/api/pacientes/${id}/historial`),
       ]);
-      if (pacRes.ok) setPaciente(await pacRes.json());
+      if (pacRes.ok) {
+        const p = await pacRes.json();
+        setPaciente(p);
+        setEditForm({
+          nombre: p.nombre || "",
+          apellido: p.apellido || "",
+          fecha_nacimiento: p.fecha_nacimiento?.slice(0, 10) || "",
+          sexo: p.sexo || "",
+          telefono: p.telefono || "",
+          email: p.email || "",
+          direccion: p.direccion || "",
+          seguro_medico: p.seguro_medico || "",
+        });
+      }
       if (histRes.ok) {
         const data = await histRes.json();
         setHistorial({ alergias: data.alergias, antecedentes: data.antecedentes });
@@ -83,6 +102,78 @@ export default function FichaPacientePage() {
       console.error("Error:", err);
     } finally {
       setCargando(false);
+    }
+  };
+
+  const abrirEdicion = () => {
+    if (paciente) {
+      setEditForm({
+        nombre: paciente.nombre || "",
+        apellido: paciente.apellido || "",
+        fecha_nacimiento: paciente.fecha_nacimiento?.slice(0, 10) || "",
+        sexo: paciente.sexo || "",
+        telefono: paciente.telefono || "",
+        email: paciente.email || "",
+        direccion: paciente.direccion || "",
+        seguro_medico: paciente.seguro_medico || "",
+      });
+      setEditMsg("");
+      setShowEditDialog(true);
+    }
+  };
+
+  const guardarEdicion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditMsg("");
+    setEditando(true);
+    try {
+      const res = await fetch(`/api/pacientes/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre: editForm.nombre || null,
+          apellido: editForm.apellido || null,
+          fecha_nacimiento: editForm.fecha_nacimiento || null,
+          sexo: editForm.sexo || null,
+          telefono: editForm.telefono || null,
+          email: editForm.email || null,
+          direccion: editForm.direccion || null,
+          seguro_medico: editForm.seguro_medico || null,
+        }),
+      });
+      if (res.ok) {
+        setEditMsg("Paciente actualizado");
+        setShowEditDialog(false);
+        cargarDatos();
+      } else {
+        const data = await res.json();
+        setEditMsg(data.error || "Error al actualizar");
+      }
+    } catch {
+      setEditMsg("Error de conexion");
+    } finally {
+      setEditando(false);
+    }
+  };
+
+  const toggleActivo = async () => {
+    if (!paciente) return;
+    setToggleMsg("");
+    try {
+      const res = await fetch(`/api/pacientes/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activo: !paciente.activo }),
+      });
+      if (res.ok) {
+        setToggleMsg(paciente.activo ? "Paciente desactivado" : "Paciente activado");
+        cargarDatos();
+      } else {
+        const data = await res.json();
+        setToggleMsg(data.error || "Error");
+      }
+    } catch {
+      setToggleMsg("Error de conexion");
     }
   };
 
@@ -104,7 +195,7 @@ export default function FichaPacientePage() {
         setMsgAlergia(data.error || "Error");
       }
     } catch {
-      setMsgAlergia("Error de conexión");
+      setMsgAlergia("Error de conexion");
     }
   };
 
@@ -126,7 +217,7 @@ export default function FichaPacientePage() {
         setMsgAntecedente(data.error || "Error");
       }
     } catch {
-      setMsgAntecedente("Error de conexión");
+      setMsgAntecedente("Error de conexion");
     }
   };
 
@@ -137,20 +228,39 @@ export default function FichaPacientePage() {
     <div className="min-h-screen bg-bg-page p-8">
       <div className="mb-4">
         <Link href="/pacientes" className="text-blue-600 hover:underline">
-          ← Volver a Pacientes
+          &larr; Volver a Pacientes
         </Link>
       </div>
 
-      <PageHeader title={`${paciente.nombre} ${paciente.apellido}`} />
-      <p className="text-gray-600 mb-6">
-        CI: {paciente.ci} |{" "}
-        {new Date(paciente.fecha_nacimiento).toLocaleDateString("es-VE")} |{" "}
-        {paciente.activo ? (
-          <span className="text-green-600">Activo</span>
-        ) : (
-          <span className="text-red-600">Inactivo</span>
-        )}
-      </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+          <PageHeader title={`${paciente.nombre} ${paciente.apellido}`} />
+          <p className="text-gray-600 mt-1 text-sm">
+            CI: {paciente.ci} |{" "}
+            {new Date(paciente.fecha_nacimiento).toLocaleDateString("es-VE")} |{" "}
+            {paciente.activo ? (
+              <span className="text-green-600 font-medium">Activo</span>
+            ) : (
+              <span className="text-red-600 font-medium">Inactivo</span>
+            )}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={abrirEdicion}>
+            Editar
+          </Button>
+          <Button
+            variant={paciente.activo ? "danger" : "primary"}
+            onClick={toggleActivo}
+          >
+            {paciente.activo ? "Desactivar" : "Activar"}
+          </Button>
+        </div>
+      </div>
+
+      {toggleMsg && (
+        <p className="text-sm text-blue-600 mb-4">{toggleMsg}</p>
+      )}
 
       <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
         <div>
@@ -368,8 +478,70 @@ export default function FichaPacientePage() {
       )}
 
       <div className="mt-8 border-t pt-4 text-sm text-gray-500">
-        <p>Atenciones previas, signos vitales, recetas y exámenes se mostrarán cuando esos módulos estén disponibles.</p>
+        <p>Atenciones previas, signos vitales, recetas y examenes se mostraran cuando esos modulos esten disponibles.</p>
       </div>
+
+      {showEditDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200">
+              <h2 className="text-lg font-semibold text-slate-800">Editar Paciente</h2>
+              <button onClick={() => setShowEditDialog(false)} className="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+            </div>
+            <form onSubmit={guardarEdicion} className="p-6 space-y-4">
+              {editMsg && (
+                <p className={`text-sm ${editMsg.includes("Error") ? "text-red-600" : "text-green-600"}`}>{editMsg}</p>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Nombre</label>
+                  <input type="text" value={editForm.nombre} onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Apellido</label>
+                  <input type="text" value={editForm.apellido} onChange={(e) => setEditForm({ ...editForm, apellido: e.target.value })} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Fecha de nacimiento</label>
+                  <input type="date" value={editForm.fecha_nacimiento} onChange={(e) => setEditForm({ ...editForm, fecha_nacimiento: e.target.value })} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Sexo</label>
+                  <select value={editForm.sexo} onChange={(e) => setEditForm({ ...editForm, sexo: e.target.value })} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                    <option value="">Sin especificar</option>
+                    <option value="M">Masculino</option>
+                    <option value="F">Femenino</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Telefono</label>
+                <input type="text" value={editForm.telefono} onChange={(e) => setEditForm({ ...editForm, telefono: e.target.value })} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Email</label>
+                <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Direccion</label>
+                <input type="text" value={editForm.direccion} onChange={(e) => setEditForm({ ...editForm, direccion: e.target.value })} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Seguro medico</label>
+                <input type="text" value={editForm.seguro_medico} onChange={(e) => setEditForm({ ...editForm, seguro_medico: e.target.value })} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="secondary" onClick={() => setShowEditDialog(false)}>Cancelar</Button>
+                <Button type="submit" variant="primary" disabled={editando}>
+                  {editando ? "Guardando..." : "Guardar"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

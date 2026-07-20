@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getSesionActual } from "@/lib/session";
 import { verificarPermiso } from "@/lib/rbac";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 export async function GET(
   _request: Request,
@@ -76,6 +77,14 @@ export async function POST(
       [id, permiso_id]
     );
 
+    await registrarAuditoria({
+      usuario_id: sesion.usuario_id,
+      tabla_afectada: "rol_permiso",
+      accion: "INSERT",
+      registro_id: undefined,
+      detalle: `Permiso ${permiso_id} agregado al rol ${id}`,
+    });
+
     return NextResponse.json({ mensaje: "Permiso agregado al rol" }, { status: 201 });
   } catch (error) {
     console.error("Error al agregar permiso:", error);
@@ -113,6 +122,14 @@ export async function DELETE(
       "DELETE FROM rol_permiso WHERE rol_id = $1 AND permiso_id = $2",
       [id, permiso_id]
     );
+
+    await registrarAuditoria({
+      usuario_id: sesion.usuario_id,
+      tabla_afectada: "rol_permiso",
+      accion: "DELETE",
+      registro_id: undefined,
+      detalle: `Permiso ${permiso_id} removido del rol ${id}`,
+    });
 
     return NextResponse.json({ mensaje: "Permiso removido del rol" });
   } catch (error) {
