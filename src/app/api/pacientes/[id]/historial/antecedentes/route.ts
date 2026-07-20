@@ -13,8 +13,21 @@ export async function GET(
     if (!sesion) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
+    if (!await verificarPermiso(sesion.usuario_id, "HISTORIAL", "READ")) {
+      return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
+    }
 
     const { id } = await params;
+
+    // RN-20: PACIENTE can only see own record
+    const { rows: rolRows } = await pool.query(
+      "SELECT r.nombre, u.paciente_id FROM rol r JOIN usuario u ON u.rol_id = r.id WHERE u.id = $1",
+      [sesion.usuario_id]
+    );
+    const rol = rolRows[0]?.nombre;
+    if (rol === "PACIENTE" && rolRows[0].paciente_id !== parseInt(id)) {
+      return NextResponse.json({ error: "Sin acceso" }, { status: 403 });
+    }
 
     const { rows: historialRows } = await pool.query(
       "SELECT id FROM historial_clinico WHERE paciente_id = $1",

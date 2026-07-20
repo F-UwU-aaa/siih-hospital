@@ -1,8 +1,18 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
+import { getSesionActual } from "@/lib/session";
+import { verificarPermiso } from "@/lib/rbac";
 
 export async function GET() {
   try {
+    const sesion = await getSesionActual();
+    if (!sesion) {
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
+    if (!await verificarPermiso(sesion.usuario_id, "SEGURIDAD", "READ")) {
+      return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
+    }
+
     const { rows } = await pool.query(
       `SELECT r.id, r.nombre, r.descripcion,
               COUNT(rp.permiso_id) AS total_permisos

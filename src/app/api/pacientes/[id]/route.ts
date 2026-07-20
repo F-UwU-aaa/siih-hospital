@@ -15,6 +15,16 @@ export async function GET(
 
     const { id } = await params;
 
+    // RN-20: PACIENTE can only see own record
+    const { rows: rolRows } = await pool.query(
+      "SELECT r.nombre, u.paciente_id FROM rol r JOIN usuario u ON u.rol_id = r.id WHERE u.id = $1",
+      [sesion.usuario_id]
+    );
+    const rol = rolRows[0]?.nombre;
+    if (rol === "PACIENTE" && rolRows[0].paciente_id !== parseInt(id)) {
+      return NextResponse.json({ error: "Sin acceso a este paciente" }, { status: 403 });
+    }
+
     const { rows } = await pool.query(
       `SELECT p.*, u.username AS usuario_username
        FROM paciente p

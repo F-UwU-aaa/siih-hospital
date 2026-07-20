@@ -32,6 +32,13 @@ export async function POST(
       );
     }
 
+    // Look up enfermera_id from the logged-in user
+    const { rows: enfRows } = await pool.query(
+      "SELECT enfermera_id FROM usuario WHERE id = $1 AND enfermera_id IS NOT NULL",
+      [sesion.usuario_id]
+    );
+    const enfermeraId = enfRows.length > 0 ? enfRows[0].enfermera_id : null;
+
     const body = await request.json();
     const {
       temperatura,
@@ -47,12 +54,13 @@ export async function POST(
     // Registrar signos vitales
     const { rows } = await pool.query(
       `INSERT INTO signos_vitales
-        (atencion_id, fecha_hora, temperatura, presion_sistolica, presion_diastolica,
+        (atencion_id, enfermera_id, fecha_hora, temperatura, presion_sistolica, presion_diastolica,
          frecuencia_cardiaca, frecuencia_resp, saturacion_oxigeno, peso, talla)
-       VALUES ($1, NOW(), $2, $3, $4, $5, $6, $7, $8, $9)
+       VALUES ($1, $2, NOW(), $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
       [
         atencionId,
+        enfermeraId,
         temperatura ?? null,
         presion_sistolica ?? null,
         presion_diastolica ?? null,

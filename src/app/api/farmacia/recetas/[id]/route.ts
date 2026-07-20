@@ -197,6 +197,7 @@ export async function PATCH(
               tipo: "STOCK_BAJO",
               asunto: `Stock bajo: ${item.medicamento_nombre}`,
               mensaje: `El lote ${lote.lote} de ${item.medicamento_nombre} tiene stock ${loteActual.rows[0].cantidad} (mínimo: ${loteActual.rows[0].stock_minimo})`,
+              rol_destino: "FARMACEUTICO",
             }).catch(() => {});
           }
         }

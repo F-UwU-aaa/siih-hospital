@@ -74,7 +74,7 @@ export async function PATCH(
     }
     const { accion, descuento, cobertura_seguro } = body;
 
-    if (!["CONFIRMAR", "PAGAR", "ANULAR"].includes(accion ?? "")) {
+    if (!["PAGAR", "ANULAR"].includes(accion ?? "")) {
       return NextResponse.json({ error: "Accion invalida" }, { status: 400 });
     }
 
@@ -94,16 +94,12 @@ export async function PATCH(
 
       const factura = facturaRows[0];
 
-      // Validate state transitions
-      if (accion === "CONFIRMAR" && factura.estado !== "BORRADOR") {
+      // Validate state transitions (spec: PENDIENTE → PAGADA, ANULADA from PENDIENTE or PAGADA)
+      if (accion === "PAGAR" && factura.estado !== "PENDIENTE") {
         await client.query("ROLLBACK");
-        return NextResponse.json({ error: "Solo se pueden confirmar facturas en BORRADOR" }, { status: 400 });
+        return NextResponse.json({ error: "Solo se pueden pagar facturas en PENDIENTE" }, { status: 400 });
       }
-      if (accion === "PAGAR" && factura.estado !== "CONFIRMADA") {
-        await client.query("ROLLBACK");
-        return NextResponse.json({ error: "Solo se pueden pagar facturas CONFIRMADAS" }, { status: 400 });
-      }
-      if (accion === "ANULAR" && !["CONFIRMADA", "PENDIENTE", "PAGADA"].includes(factura.estado)) {
+      if (accion === "ANULAR" && !["PENDIENTE", "PAGADA"].includes(factura.estado)) {
         await client.query("ROLLBACK");
         return NextResponse.json({ error: "No se puede anular esta factura" }, { status: 400 });
       }
@@ -113,8 +109,8 @@ export async function PATCH(
       let updateParams: unknown[] = [];
       let paramIdx = 1;
 
-      if (accion === "CONFIRMAR") {
-        nuevoEstado = "CONFIRMADA";
+      if (accion === "PAGAR") {
+        nuevoEstado = "PAGADA";
         if (descuento !== undefined) {
           updateFields.push(`descuento = $${paramIdx++}`);
           updateParams.push(Number(descuento) || 0);
@@ -123,10 +119,6 @@ export async function PATCH(
           updateFields.push(`cobertura_seguro = $${paramIdx++}`);
           updateParams.push(Number(cobertura_seguro) || 0);
         }
-        updateFields.push(`estado = $${paramIdx++}`);
-        updateParams.push(nuevoEstado);
-      } else if (accion === "PAGAR") {
-        nuevoEstado = "PAGADA";
         updateFields.push(`estado = $${paramIdx++}`);
         updateParams.push(nuevoEstado);
       } else {
@@ -159,7 +151,7 @@ export async function PATCH(
       );
 
       // Update total if descuento/cobertura changed
-      if (accion === "CONFIRMAR") {
+      if (accion === "PAGAR") {
         const desc = Number(descuento) || 0;
         const cob = Number(cobertura_seguro) || 0;
         const nuevoTotal = parseFloat(factura.subtotal) + parseFloat(factura.impuesto) - desc - cob;

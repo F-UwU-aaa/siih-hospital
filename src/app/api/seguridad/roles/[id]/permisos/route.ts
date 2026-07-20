@@ -8,6 +8,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const sesion = await getSesionActual();
+    if (!sesion) {
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
+    if (!await verificarPermiso(sesion.usuario_id, "SEGURIDAD", "READ")) {
+      return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
+    }
+
     const { id } = await params;
     const { rows } = await pool.query(
       `SELECT p.id, p.nombre, p.modulo, p.accion

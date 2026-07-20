@@ -113,6 +113,7 @@ export async function POST(
             tipo: "STOCK_BAJO",
             asunto: `Stock bajo: ${medRows[0].nombre}`,
             mensaje: `El lote ${lote.lote} de ${medRows[0].nombre} tiene stock ${loteActual.rows[0].cantidad} (minimo: ${loteActual.rows[0].stock_minimo})`,
+            rol_destino: "FARMACEUTICO",
           }).catch(() => {});
         }
       }

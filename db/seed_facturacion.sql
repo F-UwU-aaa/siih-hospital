@@ -1,21 +1,5 @@
--- Etapa 8: Facturacion — tarifa_servicio + facturador user
-
--- Tabla de tarifas
-CREATE TABLE IF NOT EXISTS tarifa_servicio (
-  id SERIAL PRIMARY KEY,
-  tipo_servicio VARCHAR(50) NOT NULL UNIQUE,
-  descripcion VARCHAR(200) NOT NULL,
-  precio_unitario DECIMAL(10,2) NOT NULL,
-  activo BOOLEAN DEFAULT TRUE
-);
-
--- Tarifas base
-INSERT INTO tarifa_servicio (tipo_servicio, descripcion, precio_unitario) VALUES
-  ('CONSULTA', 'Consulta medica general', 50.00),
-  ('EMERGENCIA', 'Atencion de emergencia', 150.00),
-  ('EXAMEN_LABORATORIO', 'Examen de laboratorio (por examen)', 30.00),
-  ('HOSPITALIZACION_DIA', 'Dia de hospitalizacion', 200.00)
-ON CONFLICT (tipo_servicio) DO NOTHING;
+-- Etapa 8: Facturacion — facturador user
+-- (tarifa_servicio table is now in schema.sql)
 
 -- Facturador staff record
 INSERT INTO facturador (ci, nombre, apellido, telefono, email)

@@ -243,7 +243,7 @@ export async function POST(request: Request) {
       // 9. Create factura
       const { rows: facturaRows } = await client.query(
         `INSERT INTO factura (paciente_id, atencion_id, numero_factura, subtotal, impuesto, total, estado, usuario_id)
-         VALUES ($1, $2, $3, $4, $5, $6, 'BORRADOR', $7)
+         VALUES ($1, $2, $3, $4, $5, $6, 'PENDIENTE', $7)
          RETURNING *`,
         [
           paciente_id,

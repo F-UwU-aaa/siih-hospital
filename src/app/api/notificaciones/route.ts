@@ -30,14 +30,15 @@ export async function GET(request: Request) {
     if (rol === "ADMIN" || rol === "DIRECTOR") {
       // Can see all
     } else {
-      // Can only see own notifications or system ones
+      // Can only see own notifications, role-targeted, or system ones
       conditions.push(`(
         n.paciente_id = (SELECT paciente_id FROM usuario WHERE id = $${paramIdx} AND paciente_id IS NOT NULL)
         OR n.medico_id = (SELECT medico_id FROM usuario WHERE id = $${paramIdx} AND medico_id IS NOT NULL)
-        OR (n.paciente_id IS NULL AND n.medico_id IS NULL)
+        OR n.rol_destino = $${paramIdx + 1}
+        OR (n.paciente_id IS NULL AND n.medico_id IS NULL AND n.rol_destino IS NULL)
       )`);
-      params.push(sesion.usuario_id);
-      paramIdx++;
+      params.push(sesion.usuario_id, rol);
+      paramIdx += 2;
     }
 
     if (estado) {
@@ -116,7 +117,7 @@ export async function PATCH(request: Request) {
         [sesion.usuario_id]
       );
       const user = userRows[0];
-      if (user?.paciente_id !== notif.paciente_id && user?.medico_id !== notif.medico_id) {
+      if (user?.paciente_id !== notif.paciente_id && user?.medico_id !== notif.medico_id && notif.rol_destino !== rol) {
         return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
       }
     }

@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getSesionActual } from "@/lib/session";
+import { verificarPermiso } from "@/lib/rbac";
 
 export async function GET(request: Request) {
   try {
     const sesion = await getSesionActual();
     if (!sesion) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
+    if (!await verificarPermiso(sesion.usuario_id, "HISTORIAL", "READ")) {
+      return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);

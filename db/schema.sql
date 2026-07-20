@@ -358,8 +358,31 @@ CREATE TABLE notificacion (
   mensaje TEXT NOT NULL,
   estado VARCHAR(20) DEFAULT 'PENDIENTE',
   fecha_envio TIMESTAMP,
-  CONSTRAINT chk_notificacion_destinatario CHECK (paciente_id IS NOT NULL OR medico_id IS NOT NULL)
+  rol_destino VARCHAR(30),
+  creado_en TIMESTAMP DEFAULT NOW(),
+  CONSTRAINT chk_notificacion_destinatario CHECK (
+    paciente_id IS NOT NULL OR medico_id IS NOT NULL OR rol_destino IS NOT NULL
+  )
 );
+
+-- ============================================
+-- TARIFAS DE SERVICIO
+-- ============================================
+
+CREATE TABLE tarifa_servicio (
+  id SERIAL PRIMARY KEY,
+  tipo_servicio VARCHAR(50) NOT NULL UNIQUE,
+  descripcion VARCHAR(200) NOT NULL,
+  precio_unitario DECIMAL(10,2) NOT NULL,
+  activo BOOLEAN DEFAULT TRUE
+);
+
+INSERT INTO tarifa_servicio (tipo_servicio, descripcion, precio_unitario) VALUES
+  ('CONSULTA', 'Consulta medica general', 50.00),
+  ('EMERGENCIA', 'Atencion de emergencia', 150.00),
+  ('EXAMEN_LABORATORIO', 'Examen de laboratorio (por examen)', 30.00),
+  ('HOSPITALIZACION_DIA', 'Dia de hospitalizacion', 200.00)
+ON CONFLICT (tipo_servicio) DO NOTHING;
 
 -- ============================================
 -- DATOS SEMILLA (necesarios para poder arrancar)

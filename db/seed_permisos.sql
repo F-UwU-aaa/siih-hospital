@@ -48,21 +48,17 @@ SELECT r.id, p.id
 FROM rol r, permiso p
 WHERE r.nombre = 'ADMIN';
 
--- DIRECTOR: R/W Citas, R Historial, R Atención, R/W Lab-procesar, R/W Farm-inv, R Hospital, R/W Facturación, R/W Compras, R Reportes, R Auditoría
+-- DIRECTOR: R Citas, R Historial, R Atención, R Lab, R Farmacia, R Hospital, R/W Facturación, R/W Compras, R Reportes, R Auditoría
 INSERT INTO rol_permiso (rol_id, permiso_id)
 SELECT r.id, p.id FROM rol r, permiso p
 WHERE r.nombre = 'DIRECTOR'
   AND (
     (p.modulo = 'CITAS' AND p.accion = 'READ')
-    OR (p.modulo = 'CITAS' AND p.accion = 'WRITE')
     OR (p.modulo = 'HISTORIAL' AND p.accion = 'READ')
     OR (p.modulo = 'ATENCION' AND p.accion = 'READ')
     OR (p.modulo = 'LABORATORIO' AND p.accion = 'READ')
-    OR (p.modulo = 'LABORATORIO' AND p.accion = 'WRITE')
     OR (p.modulo = 'FARMACIA' AND p.accion = 'READ')
-    OR (p.modulo = 'FARMACIA' AND p.accion = 'WRITE')
     OR (p.modulo = 'HOSPITALIZACION' AND p.accion = 'READ')
-    OR (p.modulo = 'HOSPITALIZACION' AND p.accion = 'WRITE')
     OR (p.modulo = 'FACTURACION' AND p.accion = 'READ')
     OR (p.modulo = 'FACTURACION' AND p.accion = 'WRITE')
     OR (p.modulo = 'COMPRAS' AND p.accion = 'READ')
@@ -139,7 +135,7 @@ WHERE r.nombre = 'FACTURADOR'
     OR (p.modulo = 'FACTURACION' AND p.accion = 'WRITE')
   );
 
--- PACIENTE: R/W Citas (propias), R Historial (propio), R Farmacia (disponibilidad)
+-- PACIENTE: R/W Citas (propias), R Historial (propio), R Farmacia (disponibilidad), R Facturación (propias)
 INSERT INTO rol_permiso (rol_id, permiso_id)
 SELECT r.id, p.id FROM rol r, permiso p
 WHERE r.nombre = 'PACIENTE'
@@ -148,4 +144,5 @@ WHERE r.nombre = 'PACIENTE'
     OR (p.modulo = 'CITAS' AND p.accion = 'WRITE')
     OR (p.modulo = 'HISTORIAL' AND p.accion = 'READ')
     OR (p.modulo = 'FARMACIA' AND p.accion = 'READ')
+    OR (p.modulo = 'FACTURACION' AND p.accion = 'READ')
   );

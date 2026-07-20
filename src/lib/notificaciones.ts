@@ -7,15 +7,16 @@ export async function crearNotificacion(params: {
   tipo: string;
   asunto?: string | null;
   mensaje: string;
+  rol_destino?: string | null;
 }): Promise<number> {
-  const { paciente_id, medico_id, cita_id, tipo, asunto, mensaje } = params;
+  const { paciente_id, medico_id, cita_id, tipo, asunto, mensaje, rol_destino } = params;
 
   const { rows } = await pool.query(
     `INSERT INTO notificacion
-       (paciente_id, medico_id, cita_id, tipo, asunto, mensaje, estado, creado_en)
-     VALUES ($1, $2, $3, $4, $5, $6, 'PENDIENTE', NOW())
+       (paciente_id, medico_id, cita_id, tipo, asunto, mensaje, estado, rol_destino, creado_en)
+     VALUES ($1, $2, $3, $4, $5, $6, 'PENDIENTE', $7, NOW())
      RETURNING id`,
-    [paciente_id ?? null, medico_id ?? null, cita_id ?? null, tipo, asunto ?? null, mensaje]
+    [paciente_id ?? null, medico_id ?? null, cita_id ?? null, tipo, asunto ?? null, mensaje, rol_destino ?? null]
   );
 
   return rows[0].id;
@@ -45,12 +46,12 @@ export async function marcarTodasEnviadas(usuarioId: number, rol: string): Promi
     params = [];
   } else {
     query = `UPDATE notificacion SET estado = 'ENVIADA', fecha_envio = NOW()
-             WHERE estado = 'PENDIENTE' AND (paciente_id IS NOT NULL OR medico_id IS NOT NULL)
-             AND (
+             WHERE estado = 'PENDIENTE' AND (
                paciente_id = (SELECT paciente_id FROM usuario WHERE id = $1 AND paciente_id IS NOT NULL)
                OR medico_id = (SELECT medico_id FROM usuario WHERE id = $1 AND medico_id IS NOT NULL)
+               OR rol_destino = $2
              )`;
-    params = [usuarioId];
+    params = [usuarioId, rol];
   }
 
   const result = await pool.query(query, params);
@@ -70,8 +71,9 @@ export async function contarPendientes(usuarioId: number, rol: string): Promise<
              AND (
                paciente_id = (SELECT paciente_id FROM usuario WHERE id = $1 AND paciente_id IS NOT NULL)
                OR medico_id = (SELECT medico_id FROM usuario WHERE id = $1 AND medico_id IS NOT NULL)
+               OR rol_destino = $2
              )`;
-    params = [usuarioId];
+    params = [usuarioId, rol];
   }
 
   const { rows } = await pool.query(query, params);

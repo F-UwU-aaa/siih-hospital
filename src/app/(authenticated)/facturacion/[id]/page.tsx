@@ -82,28 +82,6 @@ export default function FacturaDetailPage() {
     }
   };
 
-  const handleConfirmar = async () => {
-    try {
-      setProcesando(true);
-      setError("");
-      const res = await fetch(`/api/facturacion/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accion: "CONFIRMAR", descuento, cobertura_seguro: cobertura }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setFactura(data);
-      } else {
-        setError(data.error || "Error al confirmar");
-      }
-    } catch {
-      setError("Error al confirmar factura");
-    } finally {
-      setProcesando(false);
-    }
-  };
-
   const handlePagar = async () => {
     try {
       setProcesando(true);
@@ -111,7 +89,7 @@ export default function FacturaDetailPage() {
       const res = await fetch(`/api/facturacion/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accion: "PAGAR" }),
+        body: JSON.stringify({ accion: "PAGAR", descuento, cobertura_seguro: cobertura }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -151,9 +129,7 @@ export default function FacturaDetailPage() {
 
   const getEstadoBadge = (estado: string) => {
     const styles: Record<string, string> = {
-      BORRADOR: "bg-slate-100 text-slate-700",
       PENDIENTE: "bg-amber-100 text-amber-700",
-      CONFIRMADA: "bg-blue-100 text-blue-700",
       PAGADA: "bg-emerald-100 text-emerald-700",
       ANULADA: "bg-red-100 text-red-700",
     };
@@ -271,7 +247,7 @@ export default function FacturaDetailPage() {
               <span className="text-slate-500">Impuesto:</span>
               <span className="font-medium">{formatMoney(factura.impuesto)}</span>
             </div>
-            {isFacturador && (factura.estado === "BORRADOR" || factura.estado === "CONFIRMADA") ? (
+            {isFacturador && (factura.estado === "PENDIENTE") ? (
               <>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500">Descuento:</span>
@@ -313,16 +289,7 @@ export default function FacturaDetailPage() {
           </div>
 
           <div className="flex flex-col justify-center items-center gap-3">
-            {isFacturador && factura.estado === "BORRADOR" && (
-              <button
-                onClick={handleConfirmar}
-                disabled={procesando}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium disabled:opacity-50 w-full max-w-xs"
-              >
-                {procesando ? "Procesando..." : "Confirmar Factura"}
-              </button>
-            )}
-            {isFacturador && factura.estado === "CONFIRMADA" && (
+            {isFacturador && factura.estado === "PENDIENTE" && (
               <button
                 onClick={handlePagar}
                 disabled={procesando}
@@ -331,7 +298,7 @@ export default function FacturaDetailPage() {
                 {procesando ? "Procesando..." : "Marcar como Pagada"}
               </button>
             )}
-            {isFacturador && ["CONFIRMADA", "PENDIENTE", "PAGADA"].includes(factura.estado) && (
+            {isFacturador && ["PENDIENTE", "PAGADA"].includes(factura.estado) && (
               <button
                 onClick={handleAnular}
                 disabled={procesando}

@@ -14,10 +14,29 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const busqueda = searchParams.get("busqueda") || "";
 
+    // RN-20: PACIENTE role can only see own record
+    const { rows: rolRows } = await pool.query(
+      "SELECT r.nombre, u.paciente_id FROM rol r JOIN usuario u ON u.rol_id = r.id WHERE u.id = $1",
+      [sesion.usuario_id]
+    );
+    const rol = rolRows[0]?.nombre;
+
     let query: string;
     let params: (string | number)[];
 
-    if (busqueda) {
+    if (rol === "PACIENTE") {
+      const pacienteId = rolRows[0].paciente_id;
+      if (!pacienteId) {
+        return NextResponse.json([]);
+      }
+      query = `
+        SELECT p.*, u.username AS usuario_username
+        FROM paciente p
+        LEFT JOIN usuario u ON u.paciente_id = p.id
+        WHERE p.id = $1
+        ORDER BY p.apellido, p.nombre`;
+      params = [pacienteId];
+    } else if (busqueda) {
       query = `
         SELECT p.*, u.username AS usuario_username
         FROM paciente p

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageHeader, Button } from "@/components/ui";
 
@@ -18,10 +19,22 @@ export default function PacientesPage() {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [busqueda, setBusqueda] = useState("");
   const [cargando, setCargando] = useState(true);
+  const [rol, setRol] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
-    cargarPacientes("");
-  }, []);
+    fetch("/api/seguridad/sesion")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.rol_nombre === "PACIENTE") {
+          router.replace("/mi-historial");
+          return;
+        }
+        setRol(data?.rol_nombre || "");
+        cargarPacientes("");
+      })
+      .catch(() => {});
+  }, [router]);
 
   const cargarPacientes = async (q: string) => {
     setCargando(true);
@@ -48,12 +61,14 @@ export default function PacientesPage() {
     <div className="min-h-screen bg-bg-page p-8">
       <div className="flex justify-between items-center mb-6">
         <PageHeader title="Pacientes" />
-        <Link
-          href="/pacientes/nuevo"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          Nuevo Paciente
-        </Link>
+        {rol !== "PACIENTE" && (
+          <Link
+            href="/pacientes/nuevo"
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Nuevo Paciente
+          </Link>
+        )}
       </div>
 
       <form onSubmit={buscar} className="mb-6 flex gap-2">

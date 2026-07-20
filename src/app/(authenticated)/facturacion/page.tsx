@@ -98,30 +98,12 @@ export default function FacturacionPage() {
     }
   };
 
-  const handleConfirmar = async (facturaId: number) => {
-    try {
-      const res = await fetch(`/api/facturacion/${facturaId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accion: "CONFIRMAR", descuento: 0, cobertura_seguro: 0 }),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        setFacturas((prev) =>
-          prev.map((f) => (f.id === facturaId ? updated : f))
-        );
-      }
-    } catch {
-      setError("Error al confirmar factura");
-    }
-  };
-
   const handlePagar = async (facturaId: number) => {
     try {
       const res = await fetch(`/api/facturacion/${facturaId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accion: "PAGAR" }),
+        body: JSON.stringify({ accion: "PAGAR", descuento: 0, cobertura_seguro: 0 }),
       });
       if (res.ok) {
         const updated = await res.json();
@@ -155,9 +137,7 @@ export default function FacturacionPage() {
 
   const getEstadoBadge = (estado: string) => {
     const styles: Record<string, string> = {
-      BORRADOR: "bg-slate-100 text-slate-700",
       PENDIENTE: "bg-amber-100 text-amber-700",
-      CONFIRMADA: "bg-blue-100 text-blue-700",
       PAGADA: "bg-emerald-100 text-emerald-700",
       ANULADA: "bg-red-100 text-red-700",
     };
@@ -225,9 +205,7 @@ export default function FacturacionPage() {
               className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
             >
               <option value="">Todos</option>
-              <option value="BORRADOR">Borrador</option>
               <option value="PENDIENTE">Pendiente</option>
-              <option value="CONFIRMADA">Confirmada</option>
               <option value="PAGADA">Pagada</option>
               <option value="ANULADA">Anulada</option>
             </select>
@@ -292,15 +270,7 @@ export default function FacturacionPage() {
                       >
                         Ver
                       </button>
-                      {isFacturador && f.estado === "BORRADOR" && (
-                        <button
-                          onClick={() => handleConfirmar(f.id)}
-                          className="text-blue-600 hover:text-blue-800 text-xs font-medium mr-2"
-                        >
-                          Confirmar
-                        </button>
-                      )}
-                      {isFacturador && f.estado === "CONFIRMADA" && (
+                      {isFacturador && f.estado === "PENDIENTE" && (
                         <button
                           onClick={() => handlePagar(f.id)}
                           className="text-emerald-600 hover:text-emerald-800 text-xs font-medium mr-2"
@@ -308,7 +278,7 @@ export default function FacturacionPage() {
                           Pagar
                         </button>
                       )}
-                      {isFacturador && ["CONFIRMADA", "PENDIENTE", "PAGADA"].includes(f.estado) && (
+                      {isFacturador && ["PENDIENTE", "PAGADA"].includes(f.estado) && (
                         <button
                           onClick={() => handleAnular(f.id)}
                           className="text-red-600 hover:text-red-800 text-xs font-medium"

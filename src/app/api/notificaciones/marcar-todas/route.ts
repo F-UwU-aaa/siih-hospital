@@ -34,8 +34,9 @@ export async function PATCH(request: Request) {
                AND (
                  paciente_id = (SELECT paciente_id FROM usuario WHERE id = $1 AND paciente_id IS NOT NULL)
                  OR medico_id = (SELECT medico_id FROM usuario WHERE id = $1 AND medico_id IS NOT NULL)
+                 OR rol_destino = $2
                )`;
-      params = [sesion.usuario_id];
+      params = [sesion.usuario_id, rol];
     }
 
     const result = await pool.query(query, params);
