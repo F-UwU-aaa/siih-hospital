@@ -10,6 +10,7 @@ interface SesionData {
   rol_id: number;
   username: string;
   rol_nombre: string;
+  permisos: { modulo: string; accion: string }[];
 }
 
 interface Factura {
@@ -44,7 +45,7 @@ export default function FacturacionPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.usuario?.id) {
-          setSesion({ usuario_id: data.usuario.id, rol_id: 0, username: data.usuario.username, rol_nombre: data.usuario.rol_nombre });
+          setSesion({ usuario_id: data.usuario.id, rol_id: 0, username: data.usuario.username, rol_nombre: data.usuario.rol_nombre, permisos: data.permisos || [] });
           fetchFacturas(data.usuario.rol_nombre, data.usuario.id);
         } else {
           router.push("/login");
@@ -147,7 +148,7 @@ export default function FacturacionPage() {
   const formatMoney = (val: number) =>
     `$${Number(val).toFixed(2)}`;
 
-  const isFacturador = sesion?.rol_nombre === "FACTURADOR" || sesion?.rol_nombre === "ADMIN";
+  const isFacturador = sesion?.permisos.some(p => p.modulo === "FACTURACION" && p.accion === "WRITE") ?? false;
 
   const filtered = facturas.filter((f) => {
     if (filtroEstado && f.estado !== filtroEstado) return false;

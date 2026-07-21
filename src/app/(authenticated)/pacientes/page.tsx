@@ -19,18 +19,21 @@ export default function PacientesPage() {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [busqueda, setBusqueda] = useState("");
   const [cargando, setCargando] = useState(true);
-  const [rol, setRol] = useState("");
+  const [puedeCrear, setPuedeCrear] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     fetch("/api/seguridad/sesion")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (data?.rol_nombre === "PACIENTE") {
+        if (data?.usuario?.rol_nombre === "PACIENTE") {
           router.replace("/mi-historial");
           return;
         }
-        setRol(data?.rol_nombre || "");
+        const tienePermiso = data?.permisos?.some(
+          (p: { modulo: string; accion: string }) => p.modulo === "HISTORIAL" && p.accion === "WRITE"
+        ) ?? false;
+        setPuedeCrear(tienePermiso);
         cargarPacientes("");
       })
       .catch(() => {});
@@ -61,7 +64,7 @@ export default function PacientesPage() {
     <div className="min-h-screen bg-bg-page p-8">
       <div className="flex justify-between items-center mb-6">
         <PageHeader title="Pacientes" />
-        {rol !== "PACIENTE" && (
+        {puedeCrear && (
           <Link
             href="/pacientes/nuevo"
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
