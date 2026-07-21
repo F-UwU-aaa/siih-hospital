@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     if (!sesion) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
-    if (!await verificarPermiso(sesion.usuario_id, "HISTORIAL", "READ")) {
+    if (!await verificarPermiso(sesion.usuario_id, "PACIENTES", "READ")) {
       return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
     }
 

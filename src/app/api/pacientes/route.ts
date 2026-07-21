@@ -14,12 +14,16 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const busqueda = searchParams.get("busqueda") || "";
 
-    // RN-20: PACIENTE role can only see own record
     const { rows: rolRows } = await pool.query(
       "SELECT r.nombre, u.paciente_id FROM rol r JOIN usuario u ON u.rol_id = r.id WHERE u.id = $1",
       [sesion.usuario_id]
     );
     const rol = rolRows[0]?.nombre;
+
+    // RN-20: PACIENTE solo puede ver su propio registro; el resto necesita PACIENTES READ
+    if (rol !== "PACIENTE" && !await verificarPermiso(sesion.usuario_id, "PACIENTES", "READ")) {
+      return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
+    }
 
     let query: string;
     let params: (string | number)[];
@@ -70,7 +74,7 @@ export async function POST(request: Request) {
     if (!sesion) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
-    if (!await verificarPermiso(sesion.usuario_id, "HISTORIAL", "WRITE")) {
+    if (!await verificarPermiso(sesion.usuario_id, "PACIENTES", "WRITE")) {
       return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
     }
 
