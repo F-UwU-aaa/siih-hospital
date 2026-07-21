@@ -92,7 +92,15 @@ export async function GET(
       }
     }
 
-    return NextResponse.json({ receta, items, stock_info: stockInfo });
+    const { rows: alergias } = await pool.query(
+      `SELECT sustancia, reaccion, severidad
+       FROM alergia
+       WHERE historial_id = (SELECT id FROM historial_clinico WHERE paciente_id = $1)
+       ORDER BY severidad DESC, fecha_registro DESC`,
+      [receta.paciente_id]
+    );
+
+    return NextResponse.json({ receta, items, stock_info: stockInfo, alergias });
   } catch (error) {
     console.error("Error al obtener receta:", error);
     return NextResponse.json(

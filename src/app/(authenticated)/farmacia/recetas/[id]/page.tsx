@@ -42,6 +42,12 @@ interface StockInfo {
   lotes: { id: number; lote: string; cantidad: number; fecha_vencimiento: string }[];
 }
 
+interface Alergia {
+  sustancia: string;
+  reaccion: string | null;
+  severidad: string | null;
+}
+
 const ESTADO_COLORS: Record<string, string> = {
   EMITIDA: "bg-yellow-100 text-yellow-800",
   DISPENSADA: "bg-green-100 text-green-800",
@@ -56,6 +62,7 @@ export default function RecetaDetallePage({ params }: { params: Promise<{ id: st
   const [receta, setReceta] = useState<Receta | null>(null);
   const [items, setItems] = useState<DetalleItem[]>([]);
   const [stockInfo, setStockInfo] = useState<Record<number, StockInfo>>({});
+  const [alergias, setAlergias] = useState<Alergia[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [dispensando, setDispensando] = useState(false);
@@ -78,6 +85,7 @@ export default function RecetaDetallePage({ params }: { params: Promise<{ id: st
         setReceta(data.receta);
         setItems(data.items || []);
         setStockInfo(data.stock_info || {});
+        setAlergias(data.alergias || []);
       })
       .catch(() => setError("Receta no encontrada"))
       .finally(() => setLoading(false));
@@ -133,6 +141,51 @@ export default function RecetaDetallePage({ params }: { params: Promise<{ id: st
 
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>
+      )}
+
+      {/* ALERTA DE ALERGIAS — SIEMPRE VISIBLE ANTES DE DISPENSAR */}
+      {alergias.length > 0 ? (
+        <div className="bg-red-700 text-white border-4 border-red-900 rounded-lg p-6 mb-6 shadow-lg">
+          <div className="flex items-center gap-3 mb-3">
+            <svg className="w-8 h-8 text-yellow-300" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+            </svg>
+            <h2 className="text-xl font-bold">ALERTA DE ALERGIAS — {receta.paciente_nombre}</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {alergias.map((a, i) => (
+              <div
+                key={i}
+                className={`bg-red-900 rounded p-3 border ${
+                  a.severidad === "CRITICA" || a.severidad === "GRAVE"
+                    ? "border-red-500"
+                    : "border-red-700"
+                }`}
+              >
+                <div className="font-bold text-yellow-300 text-lg">{a.sustancia}</div>
+                {a.reaccion && (
+                  <div className="text-sm">Reacción: {a.reaccion}</div>
+                )}
+                {a.severidad && (
+                  <div className={`text-sm font-semibold mt-1 ${
+                    a.severidad === "CRITICA" ? "text-red-300" : a.severidad === "GRAVE" ? "text-orange-300" : "text-yellow-200"
+                  }`}>
+                    Severidad: {a.severidad}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-2 text-green-700">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-sm font-medium">No se registran alergias para este paciente.</span>
+          </div>
+        </div>
       )}
 
       <PageHeader 
