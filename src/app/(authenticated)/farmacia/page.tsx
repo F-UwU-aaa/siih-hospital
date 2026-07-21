@@ -367,7 +367,7 @@ export default function FarmaciaPage() {
                       </td>
                       <td className="px-3 py-2 text-gray-500">{inv.ubicacion || "—"}</td>
                       <td className="px-3 py-2">
-                        {inv.precio_unitario ? `$${inv.precio_unitario.toFixed(2)}` : "—"}
+                        {inv.precio_unitario ? `$${Number(inv.precio_unitario).toFixed(2)}` : "—"}
                       </td>
                     </tr>
                   ))}
