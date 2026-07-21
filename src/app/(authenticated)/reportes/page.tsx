@@ -594,8 +594,8 @@ function PacientesReporte({
   data: { datos: { especialidad: string; total_pacientes: number; total_atenciones: number }[] };
 }) {
   const rows = data.datos || [];
-  const totalPacientes = rows.reduce((s, r) => s + r.total_pacientes, 0);
-  const totalAtenciones = rows.reduce((s, r) => s + r.total_atenciones, 0);
+  const totalPacientes = rows.reduce((s, r) => s + Number(r.total_pacientes), 0);
+  const totalAtenciones = rows.reduce((s, r) => s + Number(r.total_atenciones), 0);
 
   return (
     <div className="space-y-6">
@@ -754,8 +754,8 @@ function OcupacionReporte({
   const camas = data.camas || [];
   const hosp = data.hospitalizaciones || [];
   const porPiso = data.por_piso || [];
-  const totalCamas = camas.reduce((s, c) => s + c.cantidad, 0);
-  const totalOcupadas = porPiso.reduce((s, p) => s + p.ocupadas, 0);
+  const totalCamas = camas.reduce((s, c) => s + Number(c.cantidad), 0);
+  const totalOcupadas = porPiso.reduce((s, p) => s + Number(p.ocupadas), 0);
   const tasaOcupacion = totalCamas > 0 ? ((totalOcupadas / totalCamas) * 100).toFixed(1) : "0";
 
   const camasChartData = camas.map((c, i) => ({
@@ -956,17 +956,17 @@ function ExamenesReporte({
   data: { datos: { tipo_examen: string; estado: string; total: number; criticos: number }[] };
 }) {
   const rows = data.datos || [];
-  const totalExamenes = rows.reduce((s, r) => s + r.total, 0);
-  const totalCriticos = rows.reduce((s, r) => s + r.criticos, 0);
+  const totalExamenes = rows.reduce((s, r) => s + Number(r.total), 0);
+  const totalCriticos = rows.reduce((s, r) => s + Number(r.criticos), 0);
 
   const byType: Record<string, { total: number; criticos: number; states: Record<string, number> }> = {};
   for (const r of rows) {
     if (!byType[r.tipo_examen]) {
       byType[r.tipo_examen] = { total: 0, criticos: 0, states: {} };
     }
-    byType[r.tipo_examen].total += r.total;
-    byType[r.tipo_examen].criticos += r.criticos;
-    byType[r.tipo_examen].states[r.estado] = (byType[r.tipo_examen].states[r.estado] || 0) + r.total;
+    byType[r.tipo_examen].total += Number(r.total);
+    byType[r.tipo_examen].criticos += Number(r.criticos);
+    byType[r.tipo_examen].states[r.estado] = (byType[r.tipo_examen].states[r.estado] || 0) + Number(r.total);
   }
   const typeEntries = Object.entries(byType);
 

@@ -97,7 +97,7 @@ export default function CitasPage() {
 
   const esPaciente = sesion?.usuario.rol_nombre === "PACIENTE";
   const esSoloLectura = ["MEDICO", "DIRECTOR"].includes(sesion?.usuario.rol_nombre || "");
-  const puedeCrear = ["ADMISIONISTA", "ADMIN"].includes(sesion?.usuario.rol_nombre || "");
+  const puedeAgendar = ["ADMISIONISTA", "ADMIN", "PACIENTE"].includes(sesion?.usuario.rol_nombre || "");
 
   const titulo = esPaciente ? "Mis Citas" : "Gestión de Citas";
 
@@ -105,12 +105,12 @@ export default function CitasPage() {
     <div className="p-8 max-w-6xl bg-bg-page">
       <div className="flex justify-between items-center mb-6">
         <PageHeader title={titulo} />
-        {puedeCrear && (
+        {puedeAgendar && (
           <Link
             href="/citas/nueva"
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
           >
-            + Nueva Cita
+            {esPaciente ? "+ Agendar Cita" : "+ Nueva Cita"}
           </Link>
         )}
       </div>

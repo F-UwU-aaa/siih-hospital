@@ -11,7 +11,7 @@ export async function GET() {
 
     // Verificar que el usuario sigue activo
     const { rows } = await pool.query(
-      `SELECT u.id, u.username, u.email, r.nombre AS rol_nombre
+      `SELECT u.id, u.username, u.email, u.paciente_id, r.nombre AS rol_nombre
        FROM usuario u
        JOIN rol r ON u.rol_id = r.id
        WHERE u.id = $1 AND u.activo = TRUE`,
@@ -42,6 +42,7 @@ export async function GET() {
         username: usuario.username,
         email: usuario.email,
         rol_nombre: usuario.rol_nombre,
+        paciente_id: usuario.paciente_id || null,
       },
       permisos,
     });

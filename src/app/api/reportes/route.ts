@@ -61,15 +61,19 @@ export async function GET(request: Request) {
                   COALESCE(SUM(subtotal), 0) AS subtotal,
                   COALESCE(SUM(impuesto), 0) AS impuestos,
                   COALESCE(SUM(descuento), 0) AS descuentos,
-                  COALESCE(SUM(cobertura_seguro), 0) AS coberturas
+                  COALESCE(SUM(cobertura_seguro), 0) AS coberturas,
+                  CASE WHEN COUNT(*) > 0 THEN SUM(total) / COUNT(*) ELSE 0 END AS promedio_diario
            FROM factura
            WHERE estado = 'PAGADA'
              AND fecha_emision::date BETWEEN $1 AND $2`,
           [fechaDesde, fechaHasta]
         );
+        const raw = totales.rows[0];
+        const totalesNum: Record<string, number> = {};
+        for (const k of Object.keys(raw)) totalesNum[k] = Number(raw[k]);
         return NextResponse.json({
           reporte: "ingresos_mensuales", desde: fechaDesde, hasta: fechaHasta,
-          datos: rows, totales: totales.rows[0],
+          datos: rows, totales: totalesNum,
         });
       }
 

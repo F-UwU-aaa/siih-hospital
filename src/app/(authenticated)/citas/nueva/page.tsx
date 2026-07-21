@@ -31,6 +31,7 @@ export default function NuevaCitaPage() {
   const [error, setError] = useState("");
   const [exito, setExito] = useState("");
 
+  const [sesionData, setSesionData] = useState<{ id: number; rol_nombre: string; paciente_id?: number } | null>(null);
   const [step, setStep] = useState(1);
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [especialidades, setEspecialidades] = useState<string[]>([]);
@@ -51,6 +52,8 @@ export default function NuevaCitaPage() {
   const [prioridad, setPrioridad] = useState("NORMAL");
   const [motivo, setMotivo] = useState("");
 
+  const [todosLosPacientes, setTodosLosPacientes] = useState<Paciente[]>([]);
+
   const [modoForm, setModoForm] = useState<"buscar" | "nuevo">("buscar");
   const [busquedaRealizada, setBusquedaRealizada] = useState(false);
   const [errorForm, setErrorForm] = useState("");
@@ -65,12 +68,31 @@ export default function NuevaCitaPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!data?.usuario?.id) { router.push("/login"); return; }
-        if (data.usuario.rol_nombre === "PACIENTE") { router.push("/citas"); return; }
+        setSesionData(data.usuario);
+        if (data.usuario.rol_nombre === "PACIENTE" && data.usuario.paciente_id) {
+          fetch("/api/pacientes")
+            .then((r) => (r.ok ? r.json() : []))
+            .then((pacientes) => {
+              if (Array.isArray(pacientes)) {
+                const mi = pacientes.find((p: Paciente) => p.id === data.usuario.paciente_id);
+                if (mi) {
+                  setPacienteSeleccionado(mi);
+                  setPacienteBusqueda(`${mi.ci} - ${mi.nombre} ${mi.apellido}`);
+                  setStep(2);
+                }
+              }
+            })
+            .catch(() => {});
+        }
       })
       .catch(() => router.push("/login"));
     fetch("/api/especialidades")
       .then((r) => r.json())
       .then(setEspecialidades)
+      .catch(() => {});
+    fetch("/api/pacientes")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => { if (Array.isArray(data)) setTodosLosPacientes(data); })
       .catch(() => {});
   }, []);
 
@@ -213,7 +235,8 @@ export default function NuevaCitaPage() {
         </div>
       )}
 
-      {/* Step 1: Buscar paciente */}
+      {/* Step 1: Buscar paciente — hidden for PACIENTE */}
+      {sesionData?.rol_nombre !== "PACIENTE" && (
       <div className={`border rounded p-4 mb-4 ${step >= 1 ? "border-blue-400" : "border-gray-200"}`}>
         <h2 className="font-semibold mb-2">
           1. Seleccionar Paciente
@@ -244,6 +267,26 @@ export default function NuevaCitaPage() {
 
             {modoForm === "buscar" && (
               <div>
+                {todosLosPacientes.length > 0 && (
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium mb-1">Seleccionar de la lista</label>
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        const p = todosLosPacientes.find((x) => x.id === Number(e.target.value));
+                        if (p) seleccionarPaciente(p);
+                      }}
+                      className="w-full border rounded px-3 py-2 text-sm"
+                    >
+                      <option value="">-- Elegir paciente --</option>
+                      {todosLosPacientes.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.ci} - {p.nombre} {p.apellido}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="flex gap-2 mb-2">
                   <input
                     type="text"
@@ -345,6 +388,7 @@ export default function NuevaCitaPage() {
           </div>
         )}
       </div>
+      )}
 
       {/* Step 2: Seleccionar especialidad */}
       <div className={`border rounded p-4 mb-4 ${step >= 2 ? "border-blue-400" : "border-gray-200"}`}>
