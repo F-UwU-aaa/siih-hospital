@@ -99,7 +99,7 @@ WHERE r.nombre = 'ADMISIONISTA'
   )
 ON CONFLICT DO NOTHING;
 
--- ENFERMERA: R Historial, R/W Atencion, R/W Hospitalizacion
+-- ENFERMERA: R Historial, R/W Atencion, R/W Hospitalizacion, R Farmacia (listar medicamentos)
 INSERT INTO rol_permiso (rol_id, permiso_id)
 SELECT r.id, p.id FROM rol r, permiso p
 WHERE r.nombre = 'ENFERMERA'
@@ -109,6 +109,7 @@ WHERE r.nombre = 'ENFERMERA'
     OR (p.modulo = 'ATENCION'       AND p.accion = 'WRITE')
     OR (p.modulo = 'HOSPITALIZACION' AND p.accion = 'READ')
     OR (p.modulo = 'HOSPITALIZACION' AND p.accion = 'WRITE')
+    OR (p.modulo = 'FARMACIA'       AND p.accion = 'READ')
   )
 ON CONFLICT DO NOTHING;
 

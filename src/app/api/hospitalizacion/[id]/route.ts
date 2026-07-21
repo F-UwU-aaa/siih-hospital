@@ -86,7 +86,7 @@ export async function GET(
     );
 
     let atenciones_previas: unknown[] = [];
-    if (rol === "MEDICO" || rol === "ADMIN") {
+    if (rol === "MEDICO" || rol === "ENFERMERA" || rol === "ADMIN") {
       const { rows } = await pool.query(
         `SELECT at.fecha_atencion, at.motivo_consulta, at.diagnostico, at.tipo,
                 m2.nombre || ' ' || m2.apellido AS medico_nombre

@@ -56,7 +56,7 @@ export default function HospitalizacionPage() {
 
   return (
     <div className="min-h-screen bg-bg-page p-8 max-w-6xl">
-      <PageHeader title={esEnfermera ? "Mis Pacientes - Hospitalizacion" : "Hospitalizacion"} />
+      <PageHeader title="Pacientes Hospitalizados" />
 
       {hospitalizaciones.length === 0 ? (
         <p className="text-gray-500">

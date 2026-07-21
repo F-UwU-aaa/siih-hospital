@@ -68,6 +68,14 @@ interface Medicacion {
   enfermera_username: string | null;
 }
 
+interface AtencionPrevia {
+  fecha_atencion: string;
+  motivo_consulta: string | null;
+  diagnostico: string | null;
+  tipo: string;
+  medico_nombre: string;
+}
+
 interface Medicamento {
   id: number;
   nombre: string;
@@ -83,10 +91,11 @@ export default function HospitalizacionDetallePage() {
   const [antecedentes, setAntecedentes] = useState<Antecedente[]>([]);
   const [signosVitales, setSignosVitales] = useState<SignosVitales[]>([]);
   const [medicaciones, setMedicaciones] = useState<Medicacion[]>([]);
+  const [atencionesPrevias, setAtencionesPrevias] = useState<AtencionPrevia[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [activeTab, setActiveTab] = useState<"signos" | "medicacion" | "alergias" | "antecedentes">("signos");
+  const [activeTab, setActiveTab] = useState<"signos" | "medicacion" | "alergias" | "antecedentes" | "evolucion">("signos");
 
   const [showSignos, setShowSignos] = useState(false);
   const [signos, setSignos] = useState({
@@ -128,6 +137,7 @@ export default function HospitalizacionDetallePage() {
         setAntecedentes(data.antecedentes || []);
         setSignosVitales(data.signos_vitales || []);
         setMedicaciones(data.medicaciones || []);
+        setAtencionesPrevias(data.atenciones_previas || []);
       })
       .catch(() => setError("Hospitalizacion no encontrada"))
       .finally(() => setLoading(false));
@@ -396,6 +406,13 @@ export default function HospitalizacionDetallePage() {
         }`}>
           Medicacion ({medicaciones.length})
         </button>
+        {(esMedico || esEnfermera) && (
+          <button onClick={() => setActiveTab("evolucion")} className={`px-4 py-2 font-medium text-sm border-b-2 ${
+            activeTab === "evolucion" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"
+          }`}>
+            Evolución ({atencionesPrevias.length})
+          </button>
+        )}
       </div>
 
       {/* Tab: Alergias (enfermera, solo lectura) */}
@@ -430,6 +447,37 @@ export default function HospitalizacionDetallePage() {
                 <div key={i} className="border rounded p-4">
                   <div className="font-semibold">{a.tipo}</div>
                   <div className="text-sm">{a.descripcion}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: Evolución (solo lectura) */}
+      {(esMedico || esEnfermera) && activeTab === "evolucion" && (
+        <div>
+          {atencionesPrevias.length === 0 ? (
+            <p className="text-gray-500">No hay atenciones previas registradas</p>
+          ) : (
+            <div className="space-y-3">
+              {atencionesPrevias.map((a, i) => (
+                <div key={i} className="border rounded p-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="text-sm font-medium">{a.tipo}</span>
+                      <span className="text-sm text-gray-500 ml-2">
+                        {new Date(a.fecha_atencion).toLocaleDateString("es-ES")}
+                      </span>
+                    </div>
+                    <span className="text-sm text-gray-500">Dr(a). {a.medico_nombre}</span>
+                  </div>
+                  {a.motivo_consulta && (
+                    <p className="text-sm mt-1">Motivo: {a.motivo_consulta}</p>
+                  )}
+                  {a.diagnostico && (
+                    <p className="text-sm mt-1">Diagnóstico: {a.diagnostico}</p>
+                  )}
                 </div>
               ))}
             </div>

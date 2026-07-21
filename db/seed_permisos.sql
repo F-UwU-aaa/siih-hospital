@@ -94,7 +94,7 @@ WHERE r.nombre = 'ADMISIONISTA'
     OR (p.modulo = 'HOSPITALIZACION' AND p.accion = 'READ')
   );
 
--- ENFERMERA: R Historial, R/W Atención (signos vitales), R Hospitalización
+-- ENFERMERA: R Historial, R/W Atención (signos vitales), R Hospitalización, R Farmacia (listar medicamentos)
 INSERT INTO rol_permiso (rol_id, permiso_id)
 SELECT r.id, p.id FROM rol r, permiso p
 WHERE r.nombre = 'ENFERMERA'
@@ -104,6 +104,7 @@ WHERE r.nombre = 'ENFERMERA'
     OR (p.modulo = 'ATENCION' AND p.accion = 'WRITE')
     OR (p.modulo = 'HOSPITALIZACION' AND p.accion = 'READ')
     OR (p.modulo = 'HOSPITALIZACION' AND p.accion = 'WRITE')
+    OR (p.modulo = 'FARMACIA' AND p.accion = 'READ')
   );
 
 -- FARMACÉUTICO: R/W Farmacia + R/W Compras
