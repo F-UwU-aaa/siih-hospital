@@ -3,6 +3,7 @@ import pool from "@/lib/db";
 import { getSesionActual } from "@/lib/session";
 import { verificarPermiso } from "@/lib/rbac";
 import { hashPassword } from "@/lib/hash";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 export async function GET(request: Request) {
   try {
@@ -166,6 +167,14 @@ export async function POST(request: Request) {
       }
 
       await client.query("COMMIT");
+
+      await registrarAuditoria({
+        usuario_id: sesion.usuario_id,
+        tabla_afectada: "paciente",
+        accion: "INSERT",
+        registro_id: paciente.id,
+        detalle: `Paciente ${nombre} ${apellido} (CI: ${ci}) registrado`,
+      });
 
       return NextResponse.json(
         {

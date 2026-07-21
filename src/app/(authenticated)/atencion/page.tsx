@@ -7,6 +7,7 @@ import { BadgeEstado, PageHeader, Button } from "@/components/ui";
 
 interface Sesion {
   usuario: { id: number; username: string; rol_nombre: string };
+  permisos: { modulo: string; accion: string }[];
 }
 
 interface CitaDelDia {
@@ -163,6 +164,7 @@ export default function AtencionPage() {
   const esAdmisionista = sesion?.usuario.rol_nombre === "ADMISIONISTA";
   const esAdmin = sesion?.usuario.rol_nombre === "ADMIN";
   const puedeCrearEmergencia = esMedico || esAdmisionista || esAdmin;
+  const puedeGestionarCitas = sesion?.permisos.some(p => p.modulo === "CITAS" && p.accion === "WRITE") ?? false;
 
   return (
     <div className="p-8 max-w-4xl bg-bg-page">
@@ -365,7 +367,7 @@ export default function AtencionPage() {
                       Abrir Atención
                     </Button>
                   )}
-                  {cita.estado === "CONFIRMADA" && (esAdmisionista || esAdmin) && (
+                  {cita.estado === "CONFIRMADA" && puedeGestionarCitas && (
                     <Button
                       variant="secondary"
                       onClick={async () => {

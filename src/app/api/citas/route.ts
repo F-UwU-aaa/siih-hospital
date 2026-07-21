@@ -3,6 +3,7 @@ import pool from "@/lib/db";
 import { getSesionActual } from "@/lib/session";
 import { verificarPermiso } from "@/lib/rbac";
 import { crearNotificacion } from "@/lib/notificaciones";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 export async function GET(request: Request) {
   try {
@@ -186,6 +187,14 @@ export async function POST(request: Request) {
       tipo: "CITA",
       asunto: `Cita ${tipo || "NORMAL"} - ${fecha} ${hora}`,
       mensaje: `Su cita con Dr(a). ${medicoRows[0].apellido} ha sido programada para el ${fecha} a las ${hora}.`,
+    });
+
+    await registrarAuditoria({
+      usuario_id: sesion.usuario_id,
+      tabla_afectada: "cita",
+      accion: "INSERT",
+      registro_id: cita.id,
+      detalle: `Cita #${cita.id} creada — paciente ${pacienteRows[0].nombre} ${pacienteRows[0].apellido}, Dr(a). ${medicoRows[0].apellido}, ${fecha} ${hora}`,
     });
 
     return NextResponse.json(

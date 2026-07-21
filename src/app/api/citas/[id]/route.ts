@@ -3,6 +3,7 @@ import pool from "@/lib/db";
 import { getSesionActual } from "@/lib/session";
 import { verificarPermiso } from "@/lib/rbac";
 import { crearNotificacion } from "@/lib/notificaciones";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 async function getRolYPacienteId(usuarioId: number) {
   const { rows } = await pool.query(
@@ -90,7 +91,7 @@ export async function PATCH(
     }
 
     const rol = await getRolYPacienteId(sesion.usuario_id);
-    if (rol?.rol_nombre === "MEDICO" || rol?.rol_nombre === "DIRECTOR") {
+    if (rol?.rol_nombre === "DIRECTOR") {
       return NextResponse.json(
         { error: "Solo lectura — no puede modificar citas" },
         { status: 403 }
@@ -172,6 +173,14 @@ export async function PATCH(
         mensaje: `Su cita del ${citaActual.fecha} a las ${citaActual.hora} ha sido cancelada.`,
       });
     }
+
+    await registrarAuditoria({
+      usuario_id: sesion.usuario_id,
+      tabla_afectada: "cita",
+      accion: "UPDATE",
+      registro_id: parseInt(id),
+      detalle: `Cita #${id} actualizada${estado ? ` — estado: ${citaActual.estado} → ${estado}` : ""}`,
+    });
 
     return NextResponse.json({
       mensaje: "Cita actualizada",

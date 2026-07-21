@@ -88,7 +88,7 @@ WHERE r.nombre = 'MEDICO'
   )
 ON CONFLICT DO NOTHING;
 
--- ADMISIONISTA: R/W Citas, R Hospitalizacion
+-- ADMISIONISTA: R/W Citas, R Hospitalizacion, R/W Historial, R Atencion
 INSERT INTO rol_permiso (rol_id, permiso_id)
 SELECT r.id, p.id FROM rol r, permiso p
 WHERE r.nombre = 'ADMISIONISTA'
@@ -96,6 +96,9 @@ WHERE r.nombre = 'ADMISIONISTA'
     (p.modulo = 'CITAS'         AND p.accion = 'READ')
     OR (p.modulo = 'CITAS'         AND p.accion = 'WRITE')
     OR (p.modulo = 'HOSPITALIZACION' AND p.accion = 'READ')
+    OR (p.modulo = 'HISTORIAL'      AND p.accion = 'READ')
+    OR (p.modulo = 'HISTORIAL'      AND p.accion = 'WRITE')
+    OR (p.modulo = 'ATENCION'       AND p.accion = 'READ')
   )
 ON CONFLICT DO NOTHING;
 

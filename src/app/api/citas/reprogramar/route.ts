@@ -3,6 +3,7 @@ import pool from "@/lib/db";
 import { getSesionActual } from "@/lib/session";
 import { verificarPermiso } from "@/lib/rbac";
 import { crearNotificacion } from "@/lib/notificaciones";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 export async function POST(request: Request) {
   try {
@@ -128,6 +129,14 @@ export async function POST(request: Request) {
         tipo: "CITA",
         asunto: `Cita reprogramada - ${nueva_fecha} ${nueva_hora}`,
         mensaje: `Su nueva cita con Dr(a). ${apellidoMedico} es el ${nueva_fecha} a las ${nueva_hora}.`,
+      });
+
+      await registrarAuditoria({
+        usuario_id: sesion.usuario_id,
+        tabla_afectada: "cita",
+        accion: "UPDATE",
+        registro_id: citaActual.id,
+        detalle: `Cita #${citaActual.id} reprogramada — ${citaActual.fecha} ${citaActual.hora} → ${nueva_fecha} ${nueva_hora}. Cita nueva #${nuevaCita.id}`,
       });
 
       return NextResponse.json(
