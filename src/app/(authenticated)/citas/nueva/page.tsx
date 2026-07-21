@@ -9,6 +9,12 @@ interface Paciente {
   ci: string;
   nombre: string;
   apellido: string;
+  fecha_nacimiento?: string;
+  sexo?: string | null;
+  telefono?: string | null;
+  email?: string | null;
+  seguro_medico?: string | null;
+  direccion?: string | null;
 }
 
 interface Medico {
@@ -45,6 +51,15 @@ export default function NuevaCitaPage() {
   const [prioridad, setPrioridad] = useState("NORMAL");
   const [motivo, setMotivo] = useState("");
 
+  const [modoForm, setModoForm] = useState<"buscar" | "nuevo">("buscar");
+  const [busquedaRealizada, setBusquedaRealizada] = useState(false);
+  const [errorForm, setErrorForm] = useState("");
+  const [creandoPaciente, setCreandoPaciente] = useState(false);
+  const [formNuevo, setFormNuevo] = useState({
+    ci: "", nombre: "", apellido: "", fecha_nacimiento: "",
+    sexo: "", telefono: "", email: "", seguro_medico: "", direccion: "",
+  });
+
   useEffect(() => {
     fetch("/api/seguridad/sesion")
       .then((r) => (r.ok ? r.json() : null))
@@ -61,10 +76,46 @@ export default function NuevaCitaPage() {
 
   const buscarPacientes = async () => {
     if (!pacienteBusqueda.trim()) return;
+    setBusquedaRealizada(true);
     const res = await fetch(`/api/pacientes?busqueda=${pacienteBusqueda}`);
     if (res.ok) {
       const data = await res.json();
       setPacientes(data);
+    }
+  };
+
+  const setForm = (campo: string, valor: string) => {
+    setFormNuevo((prev) => ({ ...prev, [campo]: valor }));
+  };
+
+  const crearPacienteInline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorForm("");
+    try {
+      setCreandoPaciente(true);
+      const res = await fetch("/api/pacientes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formNuevo),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 409) {
+          setErrorForm(`CI duplicada. Ya existe un paciente con CI ${formNuevo.ci}`);
+        } else {
+          setErrorForm(data.error || "Error al registrar paciente");
+        }
+        return;
+      }
+      const nuevoPaciente: Paciente = data.paciente;
+      setPacienteSeleccionado(nuevoPaciente);
+      setStep(2);
+      setPacienteBusqueda(`${nuevoPaciente.ci} - ${nuevoPaciente.nombre} ${nuevoPaciente.apellido}`);
+      setModoForm("buscar");
+    } catch {
+      setErrorForm("Error de conexión");
+    } finally {
+      setCreandoPaciente(false);
     }
   };
 
@@ -174,35 +225,122 @@ export default function NuevaCitaPage() {
         </h2>
         {step === 1 && (
           <div>
-            <div className="flex gap-2 mb-2">
-              <input
-                type="text"
-                placeholder="Buscar por CI o nombre..."
-                value={pacienteBusqueda}
-                onChange={(e) => setPacienteBusqueda(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && buscarPacientes()}
-                className="border rounded px-3 py-2 flex-1"
-              />
+            <div className="flex gap-2 mb-3">
               <button
                 type="button"
-                onClick={buscarPacientes}
-                className="bg-gray-200 px-3 py-2 rounded"
+                onClick={() => { setModoForm("buscar"); setErrorForm(""); }}
+                className={`px-3 py-1.5 rounded text-sm font-medium ${modoForm === "buscar" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
               >
-                Buscar
+                Paciente existente
+              </button>
+              <button
+                type="button"
+                onClick={() => { setModoForm("nuevo"); setErrorForm(""); }}
+                className={`px-3 py-1.5 rounded text-sm font-medium ${modoForm === "nuevo" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              >
+                Paciente nuevo
               </button>
             </div>
-            {pacientes.length > 0 && (
-              <div className="border rounded max-h-48 overflow-y-auto">
-                {pacientes.map((p) => (
-                  <div
-                    key={p.id}
-                    onClick={() => seleccionarPaciente(p)}
-                    className="p-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0"
+
+            {modoForm === "buscar" && (
+              <div>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    placeholder="Buscar por CI o nombre..."
+                    value={pacienteBusqueda}
+                    onChange={(e) => setPacienteBusqueda(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && buscarPacientes()}
+                    className="border rounded px-3 py-2 flex-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={buscarPacientes}
+                    className="bg-gray-200 px-3 py-2 rounded"
                   >
-                    {p.ci} - {p.nombre} {p.apellido}
+                    Buscar
+                  </button>
+                </div>
+                {pacientes.length > 0 && (
+                  <div className="border rounded max-h-48 overflow-y-auto">
+                    {pacientes.map((p) => (
+                      <div
+                        key={p.id}
+                        onClick={() => seleccionarPaciente(p)}
+                        className="p-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0"
+                      >
+                        {p.ci} - {p.nombre} {p.apellido}
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
+                {busquedaRealizada && pacientes.length === 0 && (
+                  <p className="text-sm text-gray-500 mb-2">
+                    No se encontró ningún paciente con esos datos.{" "}
+                    <button type="button" onClick={() => setModoForm("nuevo")} className="text-blue-600 hover:underline font-medium">
+                      Registrar paciente nuevo
+                    </button>
+                  </p>
+                )}
               </div>
+            )}
+
+            {modoForm === "nuevo" && (
+              <form onSubmit={crearPacienteInline} className="space-y-3">
+                {errorForm && (
+                  <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{errorForm}</p>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">CI *</label>
+                    <input type="text" required value={formNuevo.ci} onChange={(e) => setForm("ci", e.target.value)} className="w-full border rounded px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Fecha Nacimiento *</label>
+                    <input type="date" required value={formNuevo.fecha_nacimiento} onChange={(e) => setForm("fecha_nacimiento", e.target.value)} className="w-full border rounded px-3 py-2" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Nombre *</label>
+                    <input type="text" required value={formNuevo.nombre} onChange={(e) => setForm("nombre", e.target.value)} className="w-full border rounded px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Apellido *</label>
+                    <input type="text" required value={formNuevo.apellido} onChange={(e) => setForm("apellido", e.target.value)} className="w-full border rounded px-3 py-2" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Sexo</label>
+                    <select value={formNuevo.sexo} onChange={(e) => setForm("sexo", e.target.value)} className="w-full border rounded px-3 py-2">
+                      <option value="">Seleccionar</option>
+                      <option value="M">M</option>
+                      <option value="F">F</option>
+                      <option value="O">O</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Teléfono</label>
+                    <input type="text" value={formNuevo.telefono} onChange={(e) => setForm("telefono", e.target.value)} className="w-full border rounded px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Seguro Médico</label>
+                    <input type="text" value={formNuevo.seguro_medico} onChange={(e) => setForm("seguro_medico", e.target.value)} className="w-full border rounded px-3 py-2" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Email</label>
+                  <input type="email" value={formNuevo.email} onChange={(e) => setForm("email", e.target.value)} className="w-full border rounded px-3 py-2" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Dirección</label>
+                  <input type="text" value={formNuevo.direccion} onChange={(e) => setForm("direccion", e.target.value)} className="w-full border rounded px-3 py-2" />
+                </div>
+                <button type="submit" disabled={creandoPaciente} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-medium disabled:opacity-50">
+                  {creandoPaciente ? "Registrando..." : "Registrar Paciente"}
+                </button>
+              </form>
             )}
           </div>
         )}
