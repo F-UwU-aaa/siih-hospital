@@ -15,7 +15,7 @@ export async function GET() {
     }
 
     const { rows: rolRows } = await pool.query(
-      "SELECT r.nombre FROM rol r JOIN usuario u ON u.rol_id = r.id WHERE u.id = $1",
+      "SELECT r.nombre, u.paciente_id FROM rol r JOIN usuario u ON u.rol_id = r.id WHERE u.id = $1",
       [sesion.usuario_id]
     );
     const rol = rolRows[0]?.nombre;
@@ -23,7 +23,29 @@ export async function GET() {
     let query: string;
     let params: unknown[];
 
-    if (rol === "MEDICO") {
+    if (rol === "PACIENTE") {
+      const pacienteId = rolRows[0].paciente_id;
+      if (!pacienteId) {
+        return NextResponse.json([]);
+      }
+      query = `
+        SELECT el.*,
+          rl.resultado, rl.valores_referencia, rl.observaciones AS resultado_observaciones, rl.es_critico, rl.fecha_resultado,
+          a.motivo_consulta, a.diagnostico,
+          hc.paciente_id,
+          p.ci AS paciente_ci, p.nombre AS paciente_nombre, p.apellido AS paciente_apellido,
+          u.username AS tecnico_username
+        FROM examen_laboratorio el
+        JOIN atencion a ON el.atencion_id = a.id
+        JOIN historial_clinico hc ON a.historial_id = hc.id
+        JOIN paciente p ON hc.paciente_id = p.id
+        LEFT JOIN usuario u ON el.tecnico_id = u.id
+        LEFT JOIN resultado_laboratorio rl ON rl.examen_id = el.id
+        WHERE hc.paciente_id = $1
+        ORDER BY el.fecha_solicitud DESC
+      `;
+      params = [pacienteId];
+    } else if (rol === "MEDICO") {
       query = `
         SELECT el.*,
           rl.resultado, rl.valores_referencia, rl.observaciones AS resultado_observaciones, rl.es_critico, rl.fecha_resultado,

@@ -44,10 +44,14 @@ export async function GET(
 
     const examen = examenRows[0];
     const { rows: rolRows } = await pool.query(
-      "SELECT r.nombre FROM rol r JOIN usuario u ON u.rol_id = r.id WHERE u.id = $1",
+      "SELECT r.nombre, u.paciente_id FROM rol r JOIN usuario u ON u.rol_id = r.id WHERE u.id = $1",
       [sesion.usuario_id]
     );
     const rol = rolRows[0]?.nombre;
+
+    if (rol === "PACIENTE" && rolRows[0].paciente_id !== examen.paciente_id) {
+      return NextResponse.json({ error: "Sin acceso a este examen" }, { status: 403 });
+    }
 
     if (rol === "MEDICO" && examen.medico_id !== (await getMedicoId(sesion.usuario_id))) {
       return NextResponse.json(

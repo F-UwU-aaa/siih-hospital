@@ -46,6 +46,13 @@ export default function NuevaCitaPage() {
   const [motivo, setMotivo] = useState("");
 
   useEffect(() => {
+    fetch("/api/seguridad/sesion")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data?.usuario?.id) { router.push("/login"); return; }
+        if (data.usuario.rol_nombre === "PACIENTE") { router.push("/citas"); return; }
+      })
+      .catch(() => router.push("/login"));
     fetch("/api/especialidades")
       .then((r) => r.json())
       .then(setEspecialidades)

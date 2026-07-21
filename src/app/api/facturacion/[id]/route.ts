@@ -37,6 +37,14 @@ export async function GET(
       return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
     }
 
+    const { rows: rolRows } = await pool.query(
+      "SELECT r.nombre, u.paciente_id FROM rol r JOIN usuario u ON u.rol_id = r.id WHERE u.id = $1",
+      [sesion.usuario_id]
+    );
+    if (rolRows[0]?.nombre === "PACIENTE" && rolRows[0].paciente_id !== facturaRows[0].paciente_id) {
+      return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
+    }
+
     const { rows: detalles } = await pool.query(
       "SELECT * FROM detalle_factura WHERE factura_id = $1 ORDER BY id",
       [facturaId]

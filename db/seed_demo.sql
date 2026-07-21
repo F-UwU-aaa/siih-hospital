@@ -148,7 +148,7 @@ WHERE r.nombre = 'FACTURADOR'
   )
 ON CONFLICT DO NOTHING;
 
--- PACIENTE: R/W Citas (propias), R Historial (propio), R Farmacia, R Facturacion
+-- PACIENTE: R/W Citas (propias), R Historial (propio), R Farmacia, R Facturacion, R Laboratorio (propios)
 INSERT INTO rol_permiso (rol_id, permiso_id)
 SELECT r.id, p.id FROM rol r, permiso p
 WHERE r.nombre = 'PACIENTE'
@@ -158,6 +158,7 @@ WHERE r.nombre = 'PACIENTE'
     OR (p.modulo = 'HISTORIAL'  AND p.accion = 'READ')
     OR (p.modulo = 'FARMACIA'   AND p.accion = 'READ')
     OR (p.modulo = 'FACTURACION' AND p.accion = 'READ')
+    OR (p.modulo = 'LABORATORIO' AND p.accion = 'READ')
   )
 ON CONFLICT DO NOTHING;
 

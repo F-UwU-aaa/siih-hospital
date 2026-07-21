@@ -321,36 +321,37 @@ export default function LaboratorioPage() {
       {/* Otros roles (admin, director) */}
       {!esMedico && !esTecnico && (
         <div>
-          <p className="text-gray-500 mb-4">Vista de solo lectura</p>
+          <p className="text-gray-500 mb-4">{rol === "PACIENTE" ? "Mis Exámenes" : "Vista de solo lectura"}</p>
           {examenes.length === 0 ? (
-            <p className="text-gray-500">No hay exámenes registrados</p>
+            <p className="text-gray-500">{rol === "PACIENTE" ? "No tiene exámenes registrados" : "No hay exámenes registrados"}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm border">
                 <thead>
                   <tr className="bg-gray-50 border-b">
-                    <th className="text-left px-3 py-2">ID</th>
                     <th className="text-left px-3 py-2">Tipo</th>
-                    <th className="text-left px-3 py-2">Paciente</th>
                     <th className="text-left px-3 py-2">Estado</th>
                     <th className="text-left px-3 py-2">Fecha</th>
+                    <th className="text-left px-3 py-2">Resultado</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {examenes.map((e) => (
                     <tr key={e.id} className="hover:bg-gray-50">
-                      <td className="px-3 py-2">
-                        <Link href={`/laboratorio/${e.id}`} className="text-blue-600 hover:underline">
-                          #{e.id}
-                        </Link>
-                      </td>
                       <td className="px-3 py-2 font-medium">{e.tipo_examen}</td>
-                      <td className="px-3 py-2">{e.paciente_nombre} {e.paciente_apellido}</td>
                       <td className="px-3 py-2">
                         <BadgeEstado estado={e.estado} />
+                        {e.es_critico && (
+                          <span className="ml-2 px-2 py-1 rounded text-xs font-bold bg-red-100 text-red-800">
+                            CRITICO
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-2 text-xs">
                         {new Date(e.fecha_solicitud).toLocaleDateString("es-ES")}
+                      </td>
+                      <td className="px-3 py-2 text-xs max-w-[300px]">
+                        {e.estado === "COMPLETADO" ? (e.resultado || "—") : <span className="text-gray-400">Pendiente</span>}
                       </td>
                     </tr>
                   ))}

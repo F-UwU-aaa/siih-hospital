@@ -127,9 +127,17 @@ export async function POST(request: Request) {
       );
     }
 
+    const { rows: rolCheck } = await pool.query(
+      "SELECT r.nombre, u.paciente_id FROM rol r JOIN usuario u ON u.rol_id = r.id WHERE u.id = $1",
+      [sesion.usuario_id]
+    );
+    if (rolCheck[0]?.nombre === "PACIENTE") {
+      body.paciente_id = rolCheck[0].paciente_id;
+    }
+
     const { rows: pacienteRows } = await pool.query(
       "SELECT id, nombre, apellido FROM paciente WHERE id = $1",
-      [paciente_id]
+      [body.paciente_id]
     );
     if (pacienteRows.length === 0) {
       return NextResponse.json({ error: "Paciente no encontrado" }, { status: 404 });
@@ -166,7 +174,7 @@ export async function POST(request: Request) {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
-        paciente_id,
+        body.paciente_id,
         medico_id,
         fecha,
         hora,
@@ -181,7 +189,7 @@ export async function POST(request: Request) {
     const cita = citaRows[0];
 
     await crearNotificacion({
-      paciente_id,
+      paciente_id: body.paciente_id,
       medico_id,
       cita_id: cita.id,
       tipo: "CITA",

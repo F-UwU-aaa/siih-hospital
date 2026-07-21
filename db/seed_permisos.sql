@@ -139,7 +139,7 @@ WHERE r.nombre = 'FACTURADOR'
     OR (p.modulo = 'FACTURACION' AND p.accion = 'WRITE')
   );
 
--- PACIENTE: R/W Citas (propias), R Historial (propio), R Farmacia (disponibilidad), R Facturación (propias)
+-- PACIENTE: R/W Citas (propias), R Historial (propio), R Farmacia (disponibilidad), R Facturación (propias), R Laboratorio (propios)
 INSERT INTO rol_permiso (rol_id, permiso_id)
 SELECT r.id, p.id FROM rol r, permiso p
 WHERE r.nombre = 'PACIENTE'
@@ -149,4 +149,5 @@ WHERE r.nombre = 'PACIENTE'
     OR (p.modulo = 'HISTORIAL' AND p.accion = 'READ')
     OR (p.modulo = 'FARMACIA' AND p.accion = 'READ')
     OR (p.modulo = 'FACTURACION' AND p.accion = 'READ')
+    OR (p.modulo = 'LABORATORIO' AND p.accion = 'READ')
   );

@@ -13,6 +13,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
     }
 
+    const { rows: rolRows } = await pool.query(
+      "SELECT r.nombre FROM rol r JOIN usuario u ON u.rol_id = r.id WHERE u.id = $1",
+      [sesion.usuario_id]
+    );
+    if (rolRows[0]?.nombre === "PACIENTE") {
+      return NextResponse.json({ error: "No tiene permisos para buscar pacientes" }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const ci = searchParams.get("ci");
 
