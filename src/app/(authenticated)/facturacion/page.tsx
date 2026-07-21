@@ -36,6 +36,7 @@ export default function FacturacionPage() {
   const [error, setError] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroPaciente, setFiltroPaciente] = useState("");
+  const [filtroPacienteId, setFiltroPacienteId] = useState("");
   const [creando, setCreando] = useState(false);
   const [creandoPacienteId, setCreandoPacienteId] = useState("");
   const router = useRouter();
@@ -68,6 +69,27 @@ export default function FacturacionPage() {
       }
     } catch {
       setError("Error al cargar facturas");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const buscarPorPacienteId = async () => {
+    if (!filtroPacienteId.trim()) {
+      if (sesion) fetchFacturas(sesion.rol_nombre, sesion.usuario_id);
+      return;
+    }
+    try {
+      setLoading(true);
+      setError("");
+      const res = await fetch(`/api/facturacion?paciente_id=${filtroPacienteId.trim()}`);
+      if (res.ok) {
+        setFacturas(await res.json());
+      } else {
+        setError("Error al buscar facturas");
+      }
+    } catch {
+      setError("Error al buscar facturas");
     } finally {
       setLoading(false);
     }
@@ -118,12 +140,13 @@ export default function FacturacionPage() {
   };
 
   const handleAnular = async (facturaId: number) => {
-    if (!confirm("Seguro que desea anular esta factura?")) return;
+    const motivo = prompt("Motivo de anulación:");
+    if (motivo === null || !motivo.trim()) return;
     try {
       const res = await fetch(`/api/facturacion/${facturaId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accion: "ANULAR", motivo: "Anulacion desde interfaz" }),
+        body: JSON.stringify({ accion: "ANULAR", motivo: motivo.trim() }),
       });
       if (res.ok) {
         const updated = await res.json();
@@ -197,7 +220,7 @@ export default function FacturacionPage() {
       )}
 
       <div className="bg-white rounded-xl border border-slate-200 p-4">
-        <div className="flex gap-3 mb-4">
+        <div className="flex gap-3 mb-4 flex-wrap items-end">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
             <select
@@ -220,6 +243,33 @@ export default function FacturacionPage() {
               placeholder="CI o nombre..."
               className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-48 focus:ring-2 focus:ring-teal-500"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">ID Paciente</label>
+            <div className="flex gap-1">
+              <input
+                type="number"
+                value={filtroPacienteId}
+                onChange={(e) => setFiltroPacienteId(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") buscarPorPacienteId(); }}
+                placeholder="#"
+                className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-24 focus:ring-2 focus:ring-teal-500"
+              />
+              <button
+                onClick={buscarPorPacienteId}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-sm font-medium"
+              >
+                Buscar
+              </button>
+              {filtroPacienteId && (
+                <button
+                  onClick={() => { setFiltroPacienteId(""); if (sesion) fetchFacturas(sesion.rol_nombre, sesion.usuario_id); }}
+                  className="text-slate-400 hover:text-slate-600 px-2 py-2 text-sm"
+                >
+                  Limpiar
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

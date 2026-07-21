@@ -106,14 +106,15 @@ export default function FacturaDetailPage() {
   };
 
   const handleAnular = async () => {
-    if (!confirm("Seguro que desea anular esta factura?")) return;
+    const motivo = prompt("Motivo de anulación:");
+    if (motivo === null || !motivo.trim()) return;
     try {
       setProcesando(true);
       setError("");
       const res = await fetch(`/api/facturacion/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accion: "ANULAR", motivo: "Anulacion desde interfaz" }),
+        body: JSON.stringify({ accion: "ANULAR", motivo: motivo.trim() }),
       });
       const data = await res.json();
       if (res.ok) {

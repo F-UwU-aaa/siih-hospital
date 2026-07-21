@@ -3,6 +3,7 @@ import pool from "@/lib/db";
 import { getSesionActual } from "@/lib/session";
 import { verificarPermiso } from "@/lib/rbac";
 import { crearNotificacion } from "@/lib/notificaciones";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 export async function GET(
   _request: Request,
@@ -111,13 +112,30 @@ export async function PATCH(
 
       if (accion === "PAGAR") {
         nuevoEstado = "PAGADA";
+        const desc = Number(descuento) || 0;
+        const cob = Number(cobertura_seguro) || 0;
+
+        if (desc < 0) {
+          await client.query("ROLLBACK");
+          return NextResponse.json({ error: "El descuento no puede ser negativo" }, { status: 400 });
+        }
+        if (cob < 0) {
+          await client.query("ROLLBACK");
+          return NextResponse.json({ error: "La cobertura del seguro no puede ser negativa" }, { status: 400 });
+        }
+        const base = parseFloat(factura.subtotal) + parseFloat(factura.impuesto);
+        if (desc + cob > base) {
+          await client.query("ROLLBACK");
+          return NextResponse.json({ error: `Descuento + cobertura ($${(desc + cob).toFixed(2)}) no puede exceder el total base ($${base.toFixed(2)})` }, { status: 400 });
+        }
+
         if (descuento !== undefined) {
           updateFields.push(`descuento = $${paramIdx++}`);
-          updateParams.push(Number(descuento) || 0);
+          updateParams.push(desc);
         }
         if (cobertura_seguro !== undefined) {
           updateFields.push(`cobertura_seguro = $${paramIdx++}`);
-          updateParams.push(Number(cobertura_seguro) || 0);
+          updateParams.push(cob);
         }
         updateFields.push(`estado = $${paramIdx++}`);
         updateParams.push(nuevoEstado);
@@ -169,6 +187,16 @@ export async function PATCH(
       }
 
       await client.query("COMMIT");
+
+      if (accion === "PAGAR") {
+        await registrarAuditoria({
+          usuario_id: sesion.usuario_id,
+          tabla_afectada: "factura",
+          accion: "UPDATE",
+          registro_id: facturaId,
+          detalle: `Factura #${facturaId} (${factura.numero_factura}) marcada como PAGADA — descuento: $${(Number(descuento) || 0).toFixed(2)}, cobertura: $${(Number(cobertura_seguro) || 0).toFixed(2)}`,
+        });
+      }
 
       const { rows: updated } = await pool.query("SELECT * FROM factura WHERE id = $1", [facturaId]);
       return NextResponse.json(updated[0]);

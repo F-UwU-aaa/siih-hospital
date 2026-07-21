@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getSesionActual } from "@/lib/session";
 import { verificarPermiso } from "@/lib/rbac";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 export async function GET(request: Request) {
   try {
@@ -267,6 +268,14 @@ export async function POST(request: Request) {
       }
 
       await client.query("COMMIT");
+
+      await registrarAuditoria({
+        usuario_id: sesion.usuario_id,
+        tabla_afectada: "factura",
+        accion: "INSERT",
+        registro_id: factura.id,
+        detalle: `Factura ${numeroFactura} creada — paciente #${paciente_id}, total $${total}`,
+      });
 
       // Return factura with details
       const { rows: detallesFinales } = await pool.query(
