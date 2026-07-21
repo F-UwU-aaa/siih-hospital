@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas-pro";
 
 interface Sesion {
   usuario: { id: number; username: string; rol_nombre: string };
@@ -85,20 +87,6 @@ function formatCurrency(value: number): string {
 
 function formatDate(d: Date): string {
   return d.toISOString().split("T")[0];
-}
-
-function downloadCSV(filename: string, headers: string[], rows: string[][]) {
-  const csvContent = [
-    headers.join(","),
-    ...rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")),
-  ].join("\n");
-  const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
 }
 
 function PieChart({
@@ -276,6 +264,8 @@ export default function ReportesPage() {
   const [datos, setDatos] = useState<Record<string, unknown> | null>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exportandoPdf, setExportandoPdf] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/seguridad/sesion")
@@ -324,70 +314,110 @@ export default function ReportesPage() {
     if (sesion) cargarReporte();
   }, [sesion, cargarReporte]);
 
-  const exportarCSV = () => {
-    if (!datos) return;
-    const config = reportes.find((r) => r.tipo === tipoActivo)!;
-    const filename = `${tipoActivo}_${desde}_${hasta}.csv`;
+  const exportarPDF = async () => {
+    if (!datos || !reportRef.current) return;
+    setExportandoPdf(true);
+    try {
+      const container = reportRef.current;
 
-    if (tipoActivo === "pacientes_atendidos") {
-      const rows = (datos.datos as { especialidad: string; total_pacientes: number; total_atenciones: number }[]) || [];
-      downloadCSV(
-        filename,
-        ["Especialidad", "Total Pacientes", "Total Atenciones"],
-        rows.map((r) => [r.especialidad, String(r.total_pacientes), String(r.total_atenciones)])
-      );
-    } else if (tipoActivo === "ingresos_mensuales") {
-      const rows =
-        (datos.datos as { fecha: string; total_facturas: number; ingresos_totales: number }[]) || [];
-      downloadCSV(
-        filename,
-        ["Fecha", "Total Facturas", "Ingresos Totales"],
-        rows.map((r) => [r.fecha, String(r.total_facturas), String(r.ingresos_totales)])
-      );
-    } else if (tipoActivo === "ocupacion_hospitalaria") {
-      const porPiso =
-        (datos.por_piso as { piso: number; total: number; ocupadas: number; disponibles: number; mantenimiento: number }[]) || [];
-      downloadCSV(
-        `${tipoActivo}.csv`,
-        ["Piso", "Total", "Ocupadas", "Disponibles", "Mantenimiento"],
-        porPiso.map((r) => [
-          String(r.piso),
-          String(r.total),
-          String(r.ocupadas),
-          String(r.disponibles),
-          String(r.mantenimiento),
-        ])
-      );
-    } else if (tipoActivo === "stock_bajo") {
-      const rows =
-        (datos.datos as {
-          medicamento_nombre: string;
-          lote: string;
-          cantidad: number;
-          stock_minimo: number;
-          fecha_vencimiento: string;
-          ubicacion: string;
-        }[]) || [];
-      downloadCSV(
-        filename,
-        ["Medicamento", "Lote", "Cantidad", "Stock Minimo", "Vencimiento", "Ubicacion"],
-        rows.map((r) => [
-          r.medicamento_nombre,
-          r.lote,
-          String(r.cantidad),
-          String(r.stock_minimo),
-          r.fecha_vencimiento,
-          r.ubicacion,
-        ])
-      );
-    } else if (tipoActivo === "examenes_procesados") {
-      const rows =
-        (datos.datos as { tipo_examen: string; estado: string; total: number; criticos: number }[]) || [];
-      downloadCSV(
-        filename,
-        ["Tipo Examen", "Estado", "Total", "Criticos"],
-        rows.map((r) => [r.tipo_examen, r.estado, String(r.total), String(r.criticos)])
-      );
+      const svgElements = container.querySelectorAll<SVGSVGElement>("svg");
+      const svgReplacements: { svg: SVGSVGElement; parent: Node; next: Node | null; img: HTMLImageElement }[] = [];
+
+      for (const svg of svgElements) {
+        const clone = svg.cloneNode(true) as SVGSVGElement;
+        clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+        const serializer = new XMLSerializer();
+        const svgString = serializer.serializeToString(clone);
+        const svgBase64 = btoa(unescape(encodeURIComponent(svgString)));
+        const img = new Image();
+        img.src = `data:image/svg+xml;base64,${svgBase64}`;
+        img.style.width = `${svg.getBoundingClientRect().width}px`;
+        img.style.height = `${svg.getBoundingClientRect().height}px`;
+        img.style.display = "block";
+        await new Promise<void>((resolve) => {
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+        });
+        svgReplacements.push({ svg, parent: svg.parentNode!, next: svg.nextSibling, img });
+        svg.parentNode!.replaceChild(img, svg);
+      }
+
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+      });
+
+      for (const r of svgReplacements) {
+        if (r.img.parentNode) r.img.parentNode.replaceChild(r.svg, r.img);
+      }
+
+      const config = reportes.find((r) => r.tipo === tipoActivo)!;
+      const imgData = canvas.toDataURL("image/png");
+      const pdfW = 297;
+      const pdfH = 210;
+      const imgW = canvas.width;
+      const imgH = canvas.height;
+      const ratio = Math.min(pdfW / imgW, pdfH / imgH);
+      const scaledW = imgW * ratio;
+      const scaledH = imgH * ratio;
+
+      const pdf = new jsPDF({
+        orientation: scaledW > scaledH ? "landscape" : "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      pdf.setFontSize(14);
+      pdf.setFont("helvetica", "bold");
+      pdf.text("SIIH - Hospital Universitario San Andres", 10, 12);
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(`${config.label}`, 10, 19);
+      if (config.usesDate) {
+        pdf.text(`Periodo: ${desde} al ${hasta}`, 10, 25);
+      }
+
+      const offset = config.usesDate ? 30 : 22;
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const maxW = pageW - 20;
+      const finalRatio = Math.min(maxW / imgW, (pageH - offset - 10) / imgH);
+      const finalW = imgW * finalRatio;
+      const finalH = imgH * finalRatio;
+      const x = 10;
+
+      if (finalH <= pageH - offset - 10) {
+        pdf.addImage(imgData, "PNG", x, offset, finalW, finalH);
+      } else {
+        let remainingH = imgH;
+        let srcY = 0;
+        let firstPage = true;
+        while (remainingH > 0) {
+          const availH = firstPage ? pageH - offset - 10 : pageH - 15;
+          const sliceH = Math.min(remainingH, availH / finalRatio);
+          const sliceCanvas = document.createElement("canvas");
+          sliceCanvas.width = imgW;
+          sliceCanvas.height = sliceH;
+          const ctx = sliceCanvas.getContext("2d")!;
+          ctx.drawImage(canvas, 0, srcY, imgW, sliceH, 0, 0, imgW, sliceH);
+          const sliceData = sliceCanvas.toDataURL("image/png");
+          if (!firstPage) pdf.addPage();
+          pdf.addImage(sliceData, "PNG", x, firstPage ? offset : 10, finalW, sliceH * finalRatio);
+          srcY += sliceH;
+          remainingH -= sliceH;
+          firstPage = false;
+        }
+      }
+
+      pdf.save(`reporte_${tipoActivo}_${desde}_${hasta}.pdf`);
+    } catch (err) {
+      console.error("Error al exportar PDF:", err);
+      setError("Error al generar el PDF");
+    } finally {
+      setExportandoPdf(false);
     }
   };
 
@@ -419,7 +449,7 @@ export default function ReportesPage() {
         {reportes.map((r) => (
           <button
             key={r.tipo}
-            onClick={() => setTipoActivo(r.tipo)}
+            onClick={() => { setDatos(null); setTipoActivo(r.tipo); }}
             className={`group flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
               tipoActivo === r.tipo
                 ? "border-primary bg-primary/5 shadow-sm"
@@ -489,14 +519,21 @@ export default function ReportesPage() {
           Generar Reporte
         </button>
         <button
-          onClick={exportarCSV}
-          disabled={!datos}
+          onClick={exportarPDF}
+          disabled={!datos || exportandoPdf}
           className="inline-flex items-center gap-2 rounded-lg border border-border-card bg-white px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          Exportar CSV
+          {exportandoPdf ? (
+            <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          ) : (
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+            </svg>
+          )}
+          Exportar PDF
         </button>
         {!config.usesDate && (
           <span className="ml-auto text-xs text-text-secondary italic">
@@ -532,9 +569,9 @@ export default function ReportesPage() {
 
       {/* Report content */}
       {!cargando && datos && (
-        <>
+        <div ref={reportRef}>
           {/* Date range display */}
-          {config.usesDate && (datos as Record<string, unknown>).desde && (
+          {config.usesDate && !!(datos as Record<string, unknown>).desde && (
             <p className="mb-4 text-sm text-text-secondary">
               Periodo: <span className="font-medium text-text-primary">{String((datos as Record<string, unknown>).desde)}</span> al{" "}
               <span className="font-medium text-text-primary">{String((datos as Record<string, unknown>).hasta)}</span>
@@ -576,7 +613,7 @@ export default function ReportesPage() {
               datos: { tipo_examen: string; estado: string; total: number; criticos: number }[];
             }} />
           )}
-        </>
+        </div>
       )}
 
       {!cargando && !datos && !error && (

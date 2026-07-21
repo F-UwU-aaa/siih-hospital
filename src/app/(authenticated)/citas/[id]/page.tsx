@@ -179,26 +179,24 @@ export default function CitaDetallePage() {
         <div className="border rounded p-4">
           <h2 className="font-semibold mb-2">Paciente</h2>
           <p>
-            {cita.paciente_nombre} {cita.paciente_apellido}
+            {cita.paciente_nombre || cita.paciente_apellido
+              ? `${cita.paciente_nombre ?? ""} ${cita.paciente_apellido ?? ""}`.trim()
+              : "No registrado"}
           </p>
-          <p className="text-sm text-gray-500">CI: {cita.paciente_ci}</p>
-          {cita.paciente_telefono && (
-            <p className="text-sm text-gray-500">Tel: {cita.paciente_telefono}</p>
-          )}
-          {cita.paciente_email && (
-            <p className="text-sm text-gray-500">Email: {cita.paciente_email}</p>
-          )}
+          <p className="text-sm text-gray-500">CI: {cita.paciente_ci || "No registrado"}</p>
+          <p className="text-sm text-gray-500">Tel: {cita.paciente_telefono || "No registrado"}</p>
+          <p className="text-sm text-gray-500">Email: {cita.paciente_email || "No registrado"}</p>
         </div>
 
         <div className="border rounded p-4">
           <h2 className="font-semibold mb-2">Médico</h2>
           <p>
-            Dr(a). {cita.medico_nombre} {cita.medico_apellido}
+            Dr(a). {cita.medico_nombre || cita.medico_apellido
+              ? `${cita.medico_nombre ?? ""} ${cita.medico_apellido ?? ""}`.trim()
+              : "No asignado"}
           </p>
-          <p className="text-sm text-gray-500">{cita.especialidad}</p>
-          {cita.medico_telefono && (
-            <p className="text-sm text-gray-500">Tel: {cita.medico_telefono}</p>
-          )}
+          <p className="text-sm text-gray-500">{cita.especialidad || "No asignada"}</p>
+          <p className="text-sm text-gray-500">Tel: {cita.medico_telefono || "No registrado"}</p>
         </div>
       </div>
 
@@ -244,32 +242,14 @@ export default function CitaDetallePage() {
         </div>
       )}
 
-      {puedeGestionar && !esPaciente && citaActiva && (
+      {puedeGestionar && !esPaciente && citaActiva && cita.estado === "PENDIENTE" && (
         <div className="flex gap-3 mb-6">
-          {cita.estado === "PENDIENTE" && (
-            <button
-              onClick={() => actualizarEstado("CONFIRMADA")}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-            >
-              Confirmar Llegada
-            </button>
-          )}
-          {cita.estado === "CONFIRMADA" && (
-            <button
-              onClick={() => actualizarEstado("EN_ESPERA")}
-              className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700"
-            >
-              Marcar En Espera
-            </button>
-          )}
-          {cita.estado === "EN_ESPERA" && (
-            <button
-              onClick={() => actualizarEstado("COMPLETADA")}
-              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-            >
-              Completar
-            </button>
-          )}
+          <button
+            onClick={() => actualizarEstado("EN_ESPERA")}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Confirmar Llegada
+          </button>
         </div>
       )}
 

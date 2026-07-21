@@ -137,6 +137,13 @@ export async function PATCH(
       );
     }
 
+    if (citaActual.estado === "EN_ESPERA" && estado === "COMPLETADA") {
+      return NextResponse.json(
+        { error: "Una cita en EN_ESPERA solo puede completarse cerrando la atención médica desde el módulo de Atención Médica" },
+        { status: 400 }
+      );
+    }
+
     const sets: string[] = [];
     const paramsArr: (string | number)[] = [];
     let paramIdx = 1;

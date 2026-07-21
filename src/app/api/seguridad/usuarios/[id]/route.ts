@@ -74,7 +74,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { username, email, password, rol_nombre } = body;
+    const { username, email, password, rol_nombre, especialidad } = body;
 
     // Obtener usuario actual
     const { rows: actuales } = await pool.query(
@@ -121,6 +121,13 @@ export async function PUT(
        WHERE id = $5`,
       [username ?? null, email ?? null, password_hash, nuevoRolId, id]
     );
+
+    if (especialidad && actual.medico_id) {
+      await pool.query(
+        "UPDATE medico SET especialidad = $1 WHERE id = $2",
+        [especialidad, actual.medico_id]
+      );
+    }
 
     return NextResponse.json({ mensaje: "Usuario actualizado" });
   } catch (error) {

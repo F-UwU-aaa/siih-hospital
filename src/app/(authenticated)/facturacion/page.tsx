@@ -162,6 +162,7 @@ export default function FacturacionPage() {
   const getEstadoBadge = (estado: string) => {
     const styles: Record<string, string> = {
       PENDIENTE: "bg-amber-100 text-amber-700",
+      INCOMPLETA: "bg-slate-100 text-slate-600",
       PAGADA: "bg-emerald-100 text-emerald-700",
       ANULADA: "bg-red-100 text-red-700",
     };
@@ -230,6 +231,7 @@ export default function FacturacionPage() {
             >
               <option value="">Todos</option>
               <option value="PENDIENTE">Pendiente</option>
+              <option value="INCOMPLETA">Incompleta</option>
               <option value="PAGADA">Pagada</option>
               <option value="ANULADA">Anulada</option>
             </select>

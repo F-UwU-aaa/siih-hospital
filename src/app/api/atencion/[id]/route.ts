@@ -3,6 +3,7 @@ import pool from "@/lib/db";
 import { getSesionActual } from "@/lib/session";
 import { verificarPermiso } from "@/lib/rbac";
 import { registrarAuditoria } from "@/lib/auditoria";
+import { generarFactura } from "@/lib/facturacion";
 
 export async function GET(
   _request: Request,
@@ -209,6 +210,20 @@ export async function PATCH(
           registro_id: existing[0].cita_id,
           detalle: `Cita COMPLETADA desde atención #${atencionId}`,
         });
+      }
+
+      if (cerrar && atencionActualizada) {
+        try {
+          const { rows: hcRows } = await pool.query(
+            "SELECT paciente_id FROM historial_clinico WHERE id = $1",
+            [atencionActualizada.historial_id]
+          );
+          if (hcRows.length > 0) {
+            await generarFactura(hcRows[0].paciente_id, sesion.usuario_id, atencionId);
+          }
+        } catch (e) {
+          console.error("Auto-facturación al cerrar atención falló:", e);
+        }
       }
 
       return NextResponse.json({

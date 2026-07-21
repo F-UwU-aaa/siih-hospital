@@ -130,6 +130,10 @@ export default function MiHistorialPage() {
 
   const { paciente, alergias, antecedentes, atenciones, signos_vitales } = data;
 
+  const fechaNacimiento = paciente.fecha_nacimiento
+    ? new Date(paciente.fecha_nacimiento).toLocaleDateString("es-VE")
+    : "-";
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -176,7 +180,7 @@ export default function MiHistorialPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div><span className="text-slate-500">Nombre:</span> <span className="font-medium">{paciente.nombre} {paciente.apellido}</span></div>
             <div><span className="text-slate-500">CI:</span> <span className="font-medium">{paciente.ci}</span></div>
-            <div><span className="text-slate-500">Fecha nacimiento:</span> <span className="font-medium">{new Date(paciente.fecha_nacimiento).toLocaleDateString("es-VE")}</span></div>
+            <div><span className="text-slate-500">Fecha nacimiento:</span> <span className="font-medium">{fechaNacimiento}</span></div>
             <div><span className="text-slate-500">Sexo:</span> <span className="font-medium">{paciente.sexo || "-"}</span></div>
             <div><span className="text-slate-500">Telefono:</span> <span className="font-medium">{paciente.telefono || "-"}</span></div>
             <div><span className="text-slate-500">Email:</span> <span className="font-medium">{paciente.email || "-"}</span></div>

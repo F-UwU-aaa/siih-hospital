@@ -727,6 +727,7 @@ interface RecetaMedicamento {
   presentacion: string | null;
   concentracion: string | null;
   stock_total?: number;
+  precio_unitario?: number | null;
 }
 
 const TIPOS_EXAMEN = [
@@ -990,6 +991,7 @@ function RecetaForm({ atencionId }: { atencionId: number }) {
                 <option key={m.id} value={m.id}>
                   {m.nombre} — {m.presentacion} {m.concentracion}
                   {m.stock_total !== undefined ? ` (stock: ${m.stock_total})` : ""}
+                  {m.precio_unitario != null ? ` — $${m.precio_unitario.toFixed(2)}` : ""}
                 </option>
               ))}
             </select>
@@ -1041,6 +1043,22 @@ function RecetaForm({ atencionId }: { atencionId: number }) {
       {items.length === 0 && (
         <p className="text-sm text-gray-500 mb-2">Haga clic en &quot;+ Agregar medicamento&quot; para comenzar</p>
       )}
+
+      {items.length > 0 && (() => {
+        const costoTotal = items.reduce((sum, item) => {
+          if (item.medicamento_id <= 0) return sum;
+          const med = medicamentos.find((m) => m.id === item.medicamento_id);
+          const precio = med?.precio_unitario ?? 0;
+          return sum + (item.cantidad * precio);
+        }, 0);
+        if (costoTotal === 0) return null;
+        return (
+          <div className="bg-purple-100 border border-purple-200 rounded px-3 py-2 mb-3 text-sm">
+            <span className="text-purple-700 font-medium">Costo estimado de la receta:</span>{" "}
+            <span className="text-purple-900 font-bold">${costoTotal.toFixed(2)}</span>
+          </div>
+        );
+      })()}
 
       <div className="flex gap-3 mt-3">
         <Button

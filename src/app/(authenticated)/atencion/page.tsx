@@ -42,6 +42,7 @@ export default function AtencionPage() {
   const [citas, setCitas] = useState<CitaDelDia[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [refrescando, setRefrescando] = useState(false);
 
   // Emergencia
   const [showEmergencia, setShowEmergencia] = useState(false);
@@ -78,7 +79,6 @@ export default function AtencionPage() {
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data)) {
-          // Filtrar solo las que se pueden atender
           const atendibles = data.filter(
             (c: CitaDelDia) =>
               c.estado === "EN_ESPERA" || c.estado === "CONFIRMADA" || c.estado === "PENDIENTE"
@@ -89,6 +89,46 @@ export default function AtencionPage() {
       .catch(() => setError("Error al cargar citas"))
       .finally(() => setLoading(false));
   }, [sesion]);
+
+  useEffect(() => {
+    if (!sesion) return;
+    const today = new Date().toISOString().split("T")[0];
+    const interval = setInterval(() => {
+      fetch(`/api/citas?fecha=${today}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (Array.isArray(data)) {
+            const atendibles = data.filter(
+              (c: CitaDelDia) =>
+                c.estado === "EN_ESPERA" || c.estado === "CONFIRMADA" || c.estado === "PENDIENTE"
+            );
+            setCitas(atendibles);
+          }
+        })
+        .catch(() => {});
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [sesion]);
+
+  const refrescarCitas = async () => {
+    if (!sesion) return;
+    setRefrescando(true);
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const res = await fetch(`/api/citas?fecha=${today}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        const atendibles = data.filter(
+          (c: CitaDelDia) =>
+            c.estado === "EN_ESPERA" || c.estado === "CONFIRMADA" || c.estado === "PENDIENTE"
+        );
+        setCitas(atendibles);
+      }
+    } catch {
+    } finally {
+      setRefrescando(false);
+    }
+  };
 
   const buscarPacientes = async () => {
     if (!busqueda.trim()) return;
@@ -171,11 +211,16 @@ export default function AtencionPage() {
       <PageHeader
         title="Atención Médica"
         actions={
-          puedeCrearEmergencia && (
-            <Button variant="danger" onClick={() => setShowEmergencia(!showEmergencia)}>
-              Nueva Emergencia
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={refrescarCitas} disabled={refrescando}>
+              {refrescando ? "Actualizando..." : "Actualizar"}
             </Button>
-          )
+            {puedeCrearEmergencia && (
+              <Button variant="danger" onClick={() => setShowEmergencia(!showEmergencia)}>
+                Nueva Emergencia
+              </Button>
+            )}
+          </div>
         }
       />
 

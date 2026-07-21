@@ -37,7 +37,7 @@ export async function GET(
 
     // Verificar que el paciente existe
     const { rows: pacienteRows } = await pool.query(
-      "SELECT id, ci, nombre, apellido FROM paciente WHERE id = $1",
+      "SELECT p.* FROM paciente p WHERE p.id = $1",
       [id]
     );
     if (pacienteRows.length === 0) {

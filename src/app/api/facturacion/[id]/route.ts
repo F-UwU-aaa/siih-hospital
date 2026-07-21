@@ -5,6 +5,29 @@ import { verificarPermiso } from "@/lib/rbac";
 import { crearNotificacion } from "@/lib/notificaciones";
 import { registrarAuditoria } from "@/lib/auditoria";
 
+async function obtenerFacturaCompleta(facturaId: number) {
+  const { rows: facturaRows } = await pool.query(
+    `SELECT f.*,
+      p.ci AS paciente_ci, p.nombre AS paciente_nombre, p.apellido AS paciente_apellido,
+      p.telefono AS paciente_telefono,
+      u.username AS facturador_username
+     FROM factura f
+     JOIN paciente p ON f.paciente_id = p.id
+     JOIN usuario u ON f.usuario_id = u.id
+     WHERE f.id = $1`,
+    [facturaId]
+  );
+
+  if (facturaRows.length === 0) return null;
+
+  const { rows: detalles } = await pool.query(
+    "SELECT * FROM detalle_factura WHERE factura_id = $1 ORDER BY id",
+    [facturaId]
+  );
+
+  return { ...facturaRows[0], detalles };
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -21,19 +44,9 @@ export async function GET(
     const { id } = await params;
     const facturaId = parseInt(id);
 
-    const { rows: facturaRows } = await pool.query(
-      `SELECT f.*,
-        p.ci AS paciente_ci, p.nombre AS paciente_nombre, p.apellido AS paciente_apellido,
-        p.telefono AS paciente_telefono,
-        u.username AS facturador_username
-       FROM factura f
-       JOIN paciente p ON f.paciente_id = p.id
-       JOIN usuario u ON f.usuario_id = u.id
-       WHERE f.id = $1`,
-      [facturaId]
-    );
+    const factura = await obtenerFacturaCompleta(facturaId);
 
-    if (facturaRows.length === 0) {
+    if (!factura) {
       return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
     }
 
@@ -41,19 +54,11 @@ export async function GET(
       "SELECT r.nombre, u.paciente_id FROM rol r JOIN usuario u ON u.rol_id = r.id WHERE u.id = $1",
       [sesion.usuario_id]
     );
-    if (rolRows[0]?.nombre === "PACIENTE" && rolRows[0].paciente_id !== facturaRows[0].paciente_id) {
+    if (rolRows[0]?.nombre === "PACIENTE" && rolRows[0].paciente_id !== factura.paciente_id) {
       return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
     }
 
-    const { rows: detalles } = await pool.query(
-      "SELECT * FROM detalle_factura WHERE factura_id = $1 ORDER BY id",
-      [facturaId]
-    );
-
-    return NextResponse.json({
-      ...facturaRows[0],
-      detalles,
-    });
+    return NextResponse.json(factura);
   } catch (error) {
     console.error("Error al obtener factura:", error);
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
@@ -103,7 +108,6 @@ export async function PATCH(
 
       const factura = facturaRows[0];
 
-      // Validate state transitions (spec: PENDIENTE → PAGADA, ANULADA from PENDIENTE or PAGADA)
       if (accion === "PAGAR" && factura.estado !== "PENDIENTE") {
         await client.query("ROLLBACK");
         return NextResponse.json({ error: "Solo se pueden pagar facturas en PENDIENTE" }, { status: 400 });
@@ -206,8 +210,8 @@ export async function PATCH(
         });
       }
 
-      const { rows: updated } = await pool.query("SELECT * FROM factura WHERE id = $1", [facturaId]);
-      return NextResponse.json(updated[0]);
+      const facturaActualizada = await obtenerFacturaCompleta(facturaId);
+      return NextResponse.json(facturaActualizada);
     } catch (err) {
       await client.query("ROLLBACK");
       throw err;

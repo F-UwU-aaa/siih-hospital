@@ -54,27 +54,29 @@ export async function GET(request: Request) {
       // Sum non-expired stock
       const { rows: stockRows } = await pool.query(
         `SELECT COALESCE(SUM(i.cantidad), 0) AS stock_total,
-                MIN(i.stock_minimo) AS stock_minimo
+                MIN(i.stock_minimo) AS stock_minimo,
+                MIN(i.precio_unitario) FILTER (WHERE i.precio_unitario IS NOT NULL) AS precio_unitario
          FROM inventario i
          WHERE i.medicamento_id = $1 AND i.fecha_vencimiento >= CURRENT_DATE`,
         [med.id]
       );
       const stockTotal = parseInt(stockRows[0]?.stock_total || "0");
       const stockMinimo = parseInt(stockRows[0]?.stock_minimo || "10");
+      const precioUnitario = stockRows[0]?.precio_unitario ? parseFloat(stockRows[0].precio_unitario) : null;
 
       if (rol === "PACIENTE") {
-        // RN-21: paciente solo ve DISPONIBLE / NO DISPONIBLE
         resultados.push({
           ...med,
           disponibilidad: stockTotal > 0 ? "DISPONIBLE" : "NO DISPONIBLE",
+          precio_unitario: precioUnitario,
         });
       } else {
-        // MÉDICO / FARMACÉUTICO / DIRECTOR / ADMIN: ven stock numérico
         resultados.push({
           ...med,
           stock_total: stockTotal,
           stock_minimo: stockMinimo,
           bajo_stock: stockTotal <= stockMinimo,
+          precio_unitario: precioUnitario,
         });
       }
     }

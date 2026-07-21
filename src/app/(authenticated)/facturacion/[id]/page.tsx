@@ -132,6 +132,7 @@ export default function FacturaDetailPage() {
   const getEstadoBadge = (estado: string) => {
     const styles: Record<string, string> = {
       PENDIENTE: "bg-amber-100 text-amber-700",
+      INCOMPLETA: "bg-slate-100 text-slate-600",
       PAGADA: "bg-emerald-100 text-emerald-700",
       ANULADA: "bg-red-100 text-red-700",
     };

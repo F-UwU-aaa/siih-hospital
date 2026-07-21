@@ -207,8 +207,44 @@ function FormularioUsuario({
   const [email, setEmail] = useState(usuario?.email || "");
   const [rolNombre, setRolNombre] = useState(usuario?.rol_nombre || "");
   const [password, setPassword] = useState("");
+  const [ci, setCi] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [apellido, setApellido] = useState("");
+  const [especialidad, setEspecialidad] = useState("");
+  const [especialidades, setEspecialidades] = useState<string[]>([]);
   const [guardando, setGuardando] = useState(false);
   const [msg, setMsg] = useState("");
+
+  const ROLES_CON_ACTOR = ["MEDICO", "ENFERMERA", "FARMACEUTICO", "TECNICO_LAB", "ADMISIONISTA", "FACTURADOR"];
+  const requiereActor = ROLES_CON_ACTOR.includes(rolNombre);
+  const requiereEspecialidad = rolNombre === "MEDICO";
+
+  useEffect(() => {
+    if (requiereEspecialidad) {
+      fetch("/api/especialidades")
+        .then((r) => r.ok ? r.json() : [])
+        .then((data: string[]) => {
+          setEspecialidades(data.filter(Boolean));
+        })
+        .catch(() => setEspecialidades([]));
+    }
+  }, [requiereEspecialidad]);
+
+  useEffect(() => {
+    if (esEdicion && usuario) {
+      fetch(`/api/seguridad/usuarios/${usuario.id}`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => {
+          if (data) {
+            setCi(data.ci || "");
+            setNombre(data.nombre || "");
+            setApellido(data.apellido || "");
+            setEspecialidad(data.especialidad || "");
+          }
+        })
+        .catch(() => {});
+    }
+  }, [esEdicion, usuario]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -221,6 +257,14 @@ function FormularioUsuario({
         if (email !== (usuario!.email || "")) body.email = email || null;
         if (rolNombre !== usuario!.rol_nombre) body.rol_nombre = rolNombre;
         if (password) body.password = password;
+        if (requiereActor) {
+          if (ci) body.ci = ci;
+          if (nombre) body.nombre = nombre;
+          if (apellido) body.apellido = apellido;
+        }
+        if (requiereEspecialidad && especialidad) {
+          body.especialidad = especialidad;
+        }
 
         if (Object.keys(body).length === 0) {
           setMsg("Sin cambios para guardar");
@@ -245,10 +289,34 @@ function FormularioUsuario({
           setGuardando(false);
           return;
         }
+        if (requiereActor && (!ci || !nombre || !apellido)) {
+          onError("CI, nombre y apellido son requeridos para este rol");
+          setGuardando(false);
+          return;
+        }
+        if (requiereEspecialidad && !especialidad) {
+          onError("La especialidad es requerida para medicos");
+          setGuardando(false);
+          return;
+        }
+        const postBody: Record<string, unknown> = {
+          username,
+          password,
+          email: email || null,
+          rol_nombre: rolNombre,
+        };
+        if (requiereActor) {
+          postBody.ci = ci;
+          postBody.nombre = nombre;
+          postBody.apellido = apellido;
+        }
+        if (requiereEspecialidad) {
+          postBody.especialidad = especialidad;
+        }
         const res = await fetch("/api/seguridad/usuarios", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password, email: email || null, rol_nombre: rolNombre }),
+          body: JSON.stringify(postBody),
         });
         const data = await res.json();
         if (res.ok) {
@@ -318,6 +386,58 @@ function FormularioUsuario({
             />
           </div>
         </div>
+
+        {requiereActor && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-slate-100 pt-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">CI</label>
+              <input
+                type="text"
+                value={ci}
+                onChange={(e) => setCi(e.target.value)}
+                required
+                className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
+              <input
+                type="text"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                required
+                className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Apellido</label>
+              <input
+                type="text"
+                value={apellido}
+                onChange={(e) => setApellido(e.target.value)}
+                required
+                className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+              />
+            </div>
+          </div>
+        )}
+
+        {requiereEspecialidad && (
+          <div className="border-t border-slate-100 pt-3">
+            <label className="block text-sm font-medium text-slate-700 mb-1">Especialidad</label>
+            <select
+              value={especialidad}
+              onChange={(e) => setEspecialidad(e.target.value)}
+              required
+              className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+            >
+              <option value="">Seleccionar especialidad...</option>
+              {especialidades.map((esp) => (
+                <option key={esp} value={esp}>{esp}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="flex gap-2 justify-end">
           <button
             type="button"

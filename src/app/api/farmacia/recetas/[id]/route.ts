@@ -4,6 +4,7 @@ import { getSesionActual } from "@/lib/session";
 import { verificarPermiso } from "@/lib/rbac";
 import { registrarAuditoria } from "@/lib/auditoria";
 import { crearNotificacion } from "@/lib/notificaciones";
+import { agregarMedicamentosAFactura, verificarYActivarFactura } from "@/lib/facturacion";
 
 export async function GET(
   _request: Request,
@@ -260,6 +261,56 @@ export async function PATCH(
         registro_id: recetaId,
         detalle: `Receta ${receta.codigo_receta} → ${nuevoEstado}`,
       });
+
+      if (nuevoEstado === "DISPENSADA" || nuevoEstado === "PARCIAL") {
+        try {
+          const { rows: hcRows } = await pool.query(
+            `SELECT hc.paciente_id FROM receta r
+             JOIN atencion a ON r.atencion_id = a.id
+             JOIN historial_clinico hc ON a.historial_id = hc.id
+             WHERE r.id = $1`,
+            [recetaId]
+          );
+          if (hcRows.length > 0) {
+            const { rows: facturaRows } = await pool.query(
+              `SELECT f.id FROM factura f
+               WHERE f.atencion_id = $1 AND f.estado = 'INCOMPLETA'`,
+              [receta.atencion_id]
+            );
+            if (facturaRows.length > 0) {
+              const itemsMedicamentos = resultadosDispensacion
+                .filter((r) => r.dispensado > 0)
+                .map((r) => ({
+                  medicamento_nombre: r.medicamento,
+                  cantidad: r.dispensado,
+                  precio: 0,
+                }));
+              if (itemsMedicamentos.length > 0) {
+                const { rows: preciosRows } = await pool.query(
+                  `SELECT dr.medicamento_id, m.nombre, i.precio_unitario
+                   FROM detalle_receta dr
+                   JOIN medicamento m ON dr.medicamento_id = m.id
+                   LEFT JOIN inventario i ON i.medicamento_id = dr.medicamento_id
+                   WHERE dr.receta_id = $1
+                   ORDER BY i.fecha_vencimiento ASC
+                   LIMIT 1`,
+                  [recetaId]
+                );
+                for (const item of itemsMedicamentos) {
+                  const precioRow = preciosRows.find((p: { nombre: string }) => p.nombre === item.medicamento_nombre);
+                  if (precioRow?.precio_unitario) {
+                    item.precio = parseFloat(precioRow.precio_unitario);
+                  }
+                }
+                await agregarMedicamentosAFactura(facturaRows[0].id, recetaId, itemsMedicamentos);
+                await verificarYActivarFactura(facturaRows[0].id);
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Error al actualizar factura tras dispensación:", e);
+        }
+      }
 
       // Get updated receta
       const { rows: updatedReceta } = await pool.query(
