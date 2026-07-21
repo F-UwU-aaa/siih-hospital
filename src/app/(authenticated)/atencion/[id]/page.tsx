@@ -101,7 +101,7 @@ export default function AtencionDetallePage() {
   const [guardandoSignos, setGuardandoSignos] = useState(false);
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<"historial" | "alergias" | "previas" | "signos">("historial");
+  const [activeTab, setActiveTab] = useState<"historial" | "alergias" | "antecedentes" | "previas" | "signos">("historial");
 
   useEffect(() => {
     fetch("/api/seguridad/sesion")
@@ -231,7 +231,6 @@ export default function AtencionDetallePage() {
   const esEnfermera = sesion?.usuario.rol_nombre === "ENFERMERA";
   const esAdmisionista = sesion?.usuario.rol_nombre === "ADMISIONISTA";
   const esAdmin = sesion?.usuario.rol_nombre === "ADMIN";
-  const puedeCerrar = esMedico || esAdmin;
 
   const calcularEdad = (fechaNac: string) => {
     const hoy = new Date();
@@ -354,6 +353,16 @@ export default function AtencionDetallePage() {
           Alergias ({alergias.length})
         </button>
         <button
+          onClick={() => setActiveTab("antecedentes")}
+          className={`px-4 py-2 font-medium text-sm border-b-2 ${
+            activeTab === "antecedentes"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          Antecedentes ({antecedentes.length})
+        </button>
+        <button
           onClick={() => setActiveTab("previas")}
           className={`px-4 py-2 font-medium text-sm border-b-2 ${
             activeTab === "previas"
@@ -465,6 +474,24 @@ export default function AtencionDetallePage() {
                   {a.severidad && (
                     <div className="text-sm font-medium">Severidad: {a.severidad}</div>
                   )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: Antecedentes */}
+      {activeTab === "antecedentes" && (
+        <div>
+          {antecedentes.length === 0 ? (
+            <p className="text-gray-500">No hay antecedentes registrados</p>
+          ) : (
+            <div className="space-y-3">
+              {antecedentes.map((a, i) => (
+                <div key={i} className="border rounded p-4">
+                  <div className="font-semibold text-sm">{a.tipo}</div>
+                  <p className="text-sm mt-1">{a.descripcion}</p>
                 </div>
               ))}
             </div>

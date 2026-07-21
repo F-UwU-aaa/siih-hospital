@@ -23,7 +23,22 @@ export async function GET(request: Request) {
     const params: (string | number)[] = [];
     let paramIdx = 1;
 
-    if (medico_id) {
+    const { rows: rolRows } = await pool.query(
+      `SELECT r.nombre AS rol FROM usuario u JOIN rol r ON u.rol_id = r.id WHERE u.id = $1`,
+      [sesion.usuario_id]
+    );
+    const rol = rolRows[0]?.rol;
+
+    if (rol === "MEDICO") {
+      const { rows: medicoRows } = await pool.query(
+        `SELECT medico_id FROM usuario WHERE id = $1 AND medico_id IS NOT NULL`,
+        [sesion.usuario_id]
+      );
+      if (medicoRows.length > 0) {
+        conditions.push(`a.medico_id = $${paramIdx++}`);
+        params.push(medicoRows[0].medico_id);
+      }
+    } else if (medico_id) {
       conditions.push(`a.medico_id = $${paramIdx++}`);
       params.push(parseInt(medico_id));
     }

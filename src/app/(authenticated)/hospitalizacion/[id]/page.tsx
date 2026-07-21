@@ -440,7 +440,7 @@ export default function HospitalizacionDetallePage() {
       {/* Tab: Signos Vitales */}
       {activeTab === "signos" && (
         <div>
-          {(esMedico || esEnfermera) && hosp.estado === "ACTIVA" && (
+          {esEnfermera && hosp.estado === "ACTIVA" && (
             <Button
               variant="primary"
               onClick={() => setShowSignos(!showSignos)}

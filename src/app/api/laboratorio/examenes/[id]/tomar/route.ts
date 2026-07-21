@@ -17,6 +17,15 @@ export async function PATCH(
       return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
     }
 
+    const { rows: rolRows } = await pool.query(
+      `SELECT r.nombre FROM usuario u JOIN rol r ON u.rol_id = r.id WHERE u.id = $1`,
+      [sesion.usuario_id]
+    );
+    const rol = rolRows[0]?.nombre;
+    if (rol !== "TECNICO_LAB" && rol !== "ADMIN" && rol !== "DIRECTOR") {
+      return NextResponse.json({ error: "Solo técnicos de laboratorio pueden tomar exámenes" }, { status: 403 });
+    }
+
     const { id } = await params;
     const examenId = parseInt(id);
 

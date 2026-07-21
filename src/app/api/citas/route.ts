@@ -37,6 +37,15 @@ export async function GET(request: Request) {
     if (rolNombre === "PACIENTE" && sesionPacienteId) {
       conditions.push(`c.paciente_id = $${paramIdx++}`);
       params.push(sesionPacienteId);
+    } else if (rolNombre === "MEDICO") {
+      const { rows: medicoRows } = await pool.query(
+        `SELECT medico_id FROM usuario WHERE id = $1 AND medico_id IS NOT NULL`,
+        [sesion.usuario_id]
+      );
+      if (medicoRows.length > 0) {
+        conditions.push(`c.medico_id = $${paramIdx++}`);
+        params.push(medicoRows[0].medico_id);
+      }
     } else if (paciente_id) {
       conditions.push(`c.paciente_id = $${paramIdx++}`);
       params.push(parseInt(paciente_id));
